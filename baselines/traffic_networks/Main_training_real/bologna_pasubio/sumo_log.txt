@@ -1,0 +1,86 @@
+***Starting server on port 55069 ***
+Loading net-file from '/Users/hasanhaidar/Documents/GitHub/LightMind/baselines/traffic_networks/Main_training_real/bologna_pasubio/pasubio_buslanes.net.xml' ... done (21ms).
+Loading additional-files from '/Users/hasanhaidar/Documents/GitHub/LightMind/baselines/traffic_networks/Main_training_real/bologna_pasubio/pasubio_vtypes.add.xml' ... done (1ms).
+Loading additional-files from '/Users/hasanhaidar/Documents/GitHub/LightMind/baselines/traffic_networks/Main_training_real/bologna_pasubio/pasubio_bus_stops.add.xml' ... done (0ms).
+Loading additional-files from '/Users/hasanhaidar/Documents/GitHub/LightMind/baselines/traffic_networks/Main_training_real/bologna_pasubio/pasubio_busses.rou.xml' ... done (8ms).
+Loading additional-files from '/Users/hasanhaidar/Documents/GitHub/LightMind/baselines/traffic_networks/Main_training_real/bologna_pasubio/pasubio_detectors.add.xml' ... done (1ms).
+Loading additional-files from '/Users/hasanhaidar/Documents/GitHub/LightMind/baselines/traffic_networks/Main_training_real/bologna_pasubio/pasubio_tls.add.xml' ... done (0ms).
+Loading route-files incrementally from '/Users/hasanhaidar/Documents/GitHub/LightMind/baselines/traffic_networks/Main_training_real/bologna_pasubio/pasubio.rou.xml'
+Loading done.
+Simulation version 1.26.0 started with time: 0.00.
+Warning: Vehicle 'Montefiorino_23_9' performs emergency braking on lane '38[1][1]a_0' with decel=9.00, wished=4.50, severity=1.00, time=126.00.
+Warning: Vehicle 'Montefiorino_23_9' performs emergency stop at the end of lane '38[1][1]a_0' because of a red traffic light (decel=-13.03, offset=0.41), time=126.00.
+Warning: Vehicle 'Pertini_62_129' performs emergency braking on lane ':0_16_0' with decel=9.00, wished=4.50, severity=1.00, time=423.00.
+Warning: Teleporting vehicle 'Montefiorino_90_11'; waited too long (yield), lane='81_2', time=450.00.
+Warning: Vehicle 'Montefiorino_90_11' ends teleporting on edge '2[0]', time=450.00.
+Warning: Teleporting vehicle 'Montefiorino_22_10'; waited too long (yield), lane='81_1', time=452.00.
+Warning: Vehicle 'Montefiorino_22_10' ends teleporting on edge '2[0]', time=452.00.
+Warning: Teleporting vehicle 'Nigrisoli_72_19'; waited too long (yield), lane='45_1', time=522.00.
+Warning: Vehicle 'Nigrisoli_72_19' ends teleporting on edge '44', time=522.00.
+Warning: Teleporting vehicle 'Saffi_70_9'; waited too long (yield), lane='45_2', time=530.00.
+Warning: Vehicle 'Saffi_70_9' ends teleporting on edge '44', time=530.00.
+Warning: Vehicle 'Sabotino_9_59' performs emergency braking on lane '42_0' with decel=9.00, wished=4.50, severity=1.00, time=553.00.
+Warning: Vehicle 'Sabotino_9_67' performs emergency braking on lane '42_0' with decel=9.00, wished=4.50, severity=1.00, time=625.00.
+Warning: Vehicle 'Prati_Capraia_100_134' performs emergency braking on lane '3[0]_0' with decel=9.00, wished=4.50, severity=1.00, time=669.00.
+Warning: Vehicle 'Prati_Capraia_100_134' performs emergency stop at the end of lane '3[0]_0' because of a red traffic light (decel=-12.40, offset=2.87), time=669.00.
+Warning: Teleporting vehicle 'Montefiorino_90_13'; waited too long (yield), lane='81_2', time=754.00.
+Warning: Vehicle 'Montefiorino_90_13' ends teleporting on edge '2[0]', time=754.00.
+Warning: Teleporting vehicle 'Montefiorino_22_12'; waited too long (yield), lane='81_1', time=757.00.
+Warning: Vehicle 'Montefiorino_22_12' ends teleporting on edge '2[0]', time=757.00.
+Warning: Teleporting vehicle 'Malvasia_70_26'; waited too long (yield), lane='45_1', time=827.00.
+Warning: Vehicle 'Malvasia_70_26' ends teleporting on edge '44', time=827.00.
+Warning: Vehicle 'Pertini_32_347' performs emergency braking on lane '17[1]_0' with decel=9.00, wished=4.50, severity=1.00, time=830.00.
+Warning: Vehicle 'Pertini_32_347' performs emergency stop at the end of lane '17[1]_0' because of a red traffic light (decel=-11.99, offset=0.38), time=830.00.
+Warning: Teleporting vehicle 'Pertini_73_83'; waited too long (yield), lane='45_1', time=835.00.
+Warning: Vehicle 'Pertini_73_83' ends teleporting on edge '44', time=835.00.
+Warning: Vehicle 'Sabotino_9_93' performs emergency braking on lane '42_0' with decel=9.00, wished=4.50, severity=1.00, time=857.00.
+Warning: Vehicle 'Sabotino_9_93' performs emergency stop at the end of lane '42_0' because of a red traffic light (decel=-13.72, offset=1.25), time=857.00.
+Warning: Vehicle 'Sabotino_9_98' performs emergency braking on lane '42_0' with decel=9.00, wished=4.50, severity=1.00, time=902.00.
+Warning: Vehicle 'Sabotino_9_98' performs emergency stop at the end of lane '42_0' because of a red traffic light (decel=-12.61, offset=2.72), time=902.00.
+Warning: Vehicle 'Pertini_73_374' performs emergency braking on lane '36_0' with decel=9.00, wished=4.50, severity=1.00, time=902.00.
+Warning: Vehicle 'Pertini_73_374' performs emergency stop at the end of lane '36_0' because of a red traffic light (decel=-10.98, offset=1.26), time=902.00.
+Warning: Vehicle 'Nigrisoli_90_151' performs emergency braking on lane '65_0' with decel=9.00, wished=4.50, severity=1.00, time=955.00.
+Warning: Vehicle 'Nigrisoli_90_151' performs emergency stop at the end of lane '65_0' because of a red traffic light (decel=-10.20, offset=1.20), time=955.00.
+Warning: Vehicle 'Pertini_22_393' performs emergency braking on lane '17[1]_0' with decel=9.00, wished=4.50, severity=1.00, time=956.00.
+Warning: Vehicle 'Pertini_22_393' performs emergency stop at the end of lane '17[1]_0' because of a red traffic light (decel=-9.95, offset=0.54), time=956.00.
+Warning: Vehicle 'Pertini_73_433' performs emergency braking on lane '36_0' with decel=9.00, wished=4.50, severity=1.00, time=1035.00.
+Warning: Vehicle 'Pertini_73_433' performs emergency stop at the end of lane '36_0' because of a red traffic light (decel=-9.15, offset=0.15), time=1035.00.
+Warning: Teleporting vehicle 'Montefiorino_90_15'; waited too long (yield), lane='81_2', time=1059.00.
+Warning: Vehicle 'Montefiorino_90_15' ends teleporting on edge '2[0]', time=1059.00.
+Warning: Teleporting vehicle 'Montefiorino_90_14'; waited too long (yield), lane='81_1', time=1061.00.
+Warning: Vehicle 'Montefiorino_90_14' ends teleporting on edge '2[0]', time=1061.00.
+Warning: Vehicle 'Sabotino_9_116' performs emergency braking on lane '42_0' with decel=9.00, wished=4.50, severity=1.00, time=1062.00.
+Warning: Vehicle 'Sabotino_9_116' performs emergency stop at the end of lane '42_0' because of a red traffic light (decel=-15.00, offset=5.25), time=1062.00.
+Warning: Teleporting vehicle 'Montefiorino_30_36'; waited too long (yield), lane='81_0', time=1076.00.
+Warning: Vehicle 'Montefiorino_30_36' ends teleporting on edge '38[0]', time=1076.00.
+Warning: Teleporting vehicle 'Malvasia_70_27'; waited too long (yield), lane='45_2', time=1131.00.
+Warning: Vehicle 'Malvasia_70_27' ends teleporting on edge '44', time=1131.00.
+Warning: Teleporting vehicle 'Nigrisoli_72_38'; waited too long (yield), lane='45_1', time=1141.00.
+Warning: Vehicle 'Nigrisoli_72_38' ends teleporting on edge '44', time=1141.00.
+Warning: Vehicle 'Prati_Capraia_100_274' performs emergency braking on lane '3[0]_1' with decel=9.00, wished=4.50, severity=1.00, time=1359.00.
+Warning: Vehicle 'Prati_Capraia_100_274' performs emergency stop at the end of lane '3[0]_1' because of a red traffic light (decel=-10.80, offset=0.09), time=1359.00.
+Warning: Vehicle 'Prati_Capraia_10_275' performs emergency braking on lane '3[0]_0' with decel=9.00, wished=4.50, severity=1.00, time=1359.00.
+Warning: Teleporting vehicle 'Montefiorino_90_16'; waited too long (yield), lane='81_2', time=1363.00.
+Warning: Vehicle 'Montefiorino_90_16' ends teleporting on edge '2[0]', time=1363.00.
+Warning: Teleporting vehicle 'Montefiorino_90_18'; waited too long (yield), lane='81_1', time=1366.00.
+Warning: Vehicle 'Montefiorino_90_18' ends teleporting on edge '2[0]', time=1366.00.
+Warning: Teleporting vehicle 'Montefiorino_30_38'; waited too long (yield), lane='81_0', time=1381.00.
+Warning: Vehicle 'Montefiorino_30_38' ends teleporting on edge '38[0]', time=1381.00.
+Warning: Teleporting vehicle 'Saffi_70_42'; waited too long (yield), lane='45_2', time=1436.00.
+Warning: Vehicle 'Saffi_70_42' ends teleporting on edge '44', time=1436.00.
+Warning: Teleporting vehicle 'Pertini_73_131'; waited too long (yield), lane='45_1', time=1445.00.
+Warning: Vehicle 'Pertini_73_131' ends teleporting on edge '44', time=1445.00.
+Simulation ended at time: 1529.00.
+Reason: TraCI requested termination.
+Performance:
+ Duration: 46.69s
+ TraCI-Duration: 44.93s
+ Real time factor: 32.75
+ UPS: 22315.655322
+Vehicles:
+ Inserted: 3246 (Loaded: 3974)
+ Running: 944
+ Waiting: 471
+ Teleports: 18 (Yield: 18)
+ Emergency Stops: 11
+ Emergency Braking: 15
