@@ -245,6 +245,10 @@ def evaluate_model(
 def main() -> None:
     """Run a SUMO training loop with a shared DQN Q-network model."""
     config = Config()
+    config.sumo_config_path = "baselines/traffic_networks/Debugging/grid6_smoke/grid6.sumocfg"
+    import os
+    print("PATH:", config.sumo_config_path)
+    print("EXISTS:", os.path.exists(config.sumo_config_path), flush=True)
     sumo_cmd = _build_sumo_cmd(config)
     start_episode = 0
     output_dir = Path(__file__).resolve().parent / "training_artifacts"
