@@ -34,8 +34,7 @@ class TrafficLightEnv:
                 break
             traci.simulationStep()
 
-        vehicle_ids = list(traci.vehicle.getIDList())
-        print(f"Reset vehicles={len(vehicle_ids)} ids={vehicle_ids}")
+        print(f"Reset vehicles={len(traci.vehicle.getIDList())}")
 
         self.episode_metrics = self._empty_episode_metrics()
         tls_ids = self.get_all_tls_ids()
@@ -58,8 +57,9 @@ class TrafficLightEnv:
                 current_phase = traci.trafficlight.getPhase(tls_id)
                 phase_count = len(traci.trafficlight.getAllProgramLogics(tls_id)[0].phases)
                 next_phase = (current_phase + 1) % phase_count
-                traci.trafficlight.setPhase(tls_id, next_phase)
-                action_changed = next_phase != current_phase
+                if next_phase != current_phase:
+                    traci.trafficlight.setPhase(tls_id, next_phase)
+                    action_changed = True
             action_changed_by_tls[tls_id] = action_changed
 
         # Advance SUMO by one simulation step.
@@ -68,8 +68,9 @@ class TrafficLightEnv:
         tls_ids = self.get_all_tls_ids()
         next_state = {tls_id: self.get_state(tls_id) for tls_id in tls_ids}
         step_metrics = self.get_step_metrics(tls_ids)
+        num_tls = max(len(tls_ids), 1)
         rewards = {
-            tls_id: self.compute_reward(tls_id, step_metrics)
+            tls_id: self.compute_reward(step_metrics["per_tls"][tls_id], step_metrics, num_tls)
             for tls_id in tls_ids
         }
         for tls_id, action_changed in action_changed_by_tls.items():
@@ -101,18 +102,22 @@ class TrafficLightEnv:
 
         return queue_lengths + [current_phase]
 
-    def compute_reward(self, tls_id: str, step_metrics: dict[str, float]) -> float:
-        """Combine throughput and traffic quality terms into a dense reward."""
-        tls_metrics = self.get_tls_metrics(tls_id)
+    def compute_reward(
+        self,
+        tls_metrics: dict[str, float],
+        step_metrics: dict[str, Any],
+        num_tls: int,
+    ) -> float:
+        """Combine throughput and queue penalty terms into a dense reward."""
+        cars_passed_per_tls = step_metrics["cars_passed"] / num_tls
+        teleports_per_tls = step_metrics["teleports"] / num_tls
         reward = (
-            step_metrics["cars_passed"] * 1.0
-            + min(tls_metrics["avg_speed"], 10.0) * 0.5
-            - (tls_metrics["waiting_time"] / 2000.0)
-            - (tls_metrics["stopped_cars"] / 10000.0)
-            - step_metrics["teleports"] * 20.0
+            cars_passed_per_tls * 1.0
+            - (tls_metrics["waiting_time"] / 200.0)
+            - (tls_metrics["stopped_cars"] / 1000.0)
+            - teleports_per_tls * 20.0
         )
-
-        return float(max(-1.0, min(1.0, reward / 100.0)))
+        return float(max(-1.0, min(1.0, reward)))
 
     def get_total_queue(self, tls_id: str) -> float:
         """Return the total halted vehicles across lanes for one traffic light."""
@@ -130,11 +135,12 @@ class TrafficLightEnv:
         """Return all traffic light IDs in the current SUMO simulation."""
         return list(traci.trafficlight.getIDList())
 
-    def get_step_metrics(self, tls_ids: list[str]) -> dict[str, float]:
+    def get_step_metrics(self, tls_ids: list[str]) -> dict[str, Any]:
         """Collect network-level diagnostics for one simulation step."""
-        waiting_time = sum(self.get_tls_metrics(tls_id)["waiting_time"] for tls_id in tls_ids)
-        stopped_cars = sum(self.get_tls_metrics(tls_id)["stopped_cars"] for tls_id in tls_ids)
-        avg_speed_values = [self.get_tls_metrics(tls_id)["avg_speed"] for tls_id in tls_ids]
+        per_tls = {tls_id: self.get_tls_metrics(tls_id) for tls_id in tls_ids}
+        waiting_time = sum(m["waiting_time"] for m in per_tls.values())
+        stopped_cars = sum(m["stopped_cars"] for m in per_tls.values())
+        avg_speed_values = [m["avg_speed"] for m in per_tls.values()]
 
         return {
             "teleports": float(traci.simulation.getStartingTeleportNumber()),
@@ -144,6 +150,7 @@ class TrafficLightEnv:
             "avg_speed": float(sum(avg_speed_values) / len(avg_speed_values))
             if avg_speed_values
             else 0.0,
+            "per_tls": per_tls,
         }
 
     def get_tls_metrics(self, tls_id: str) -> dict[str, float]:
@@ -167,7 +174,7 @@ class TrafficLightEnv:
             "avg_speed": float(avg_speed),
         }
 
-    def _update_episode_metrics(self, step_metrics: dict[str, float]) -> None:
+    def _update_episode_metrics(self, step_metrics: dict[str, Any]) -> None:
         """Accumulate episode-level diagnostics for logging."""
         self.episode_metrics["teleports"] += step_metrics["teleports"]
         self.episode_metrics["cars_passed"] += step_metrics["cars_passed"]

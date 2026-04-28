@@ -23,7 +23,7 @@ class TrafficModel(nn.Module):
             nn.Linear(128, action_dim),
         )
 
-    def forward(self, state):
+    def forward(self, state) -> Tensor:
         """Return Q-values for each available action."""
         if not isinstance(state, Tensor):
             state = torch.tensor(state, dtype=torch.float32)
