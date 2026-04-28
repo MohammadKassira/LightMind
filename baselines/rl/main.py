@@ -22,11 +22,23 @@ from baselines.rl.env import TrafficLightEnv
 from baselines.rl.model import TrafficModel
 
 
-def _build_sumo_cmd(config: Config, seed: Optional[int] = None) -> list[str]:
+def _build_sumo_cmd(
+    config: Config,
+    seed: Optional[int] = None,
+    scale: Optional[float] = None,
+    sumo_cfg_path: Optional[Union[os.PathLike[str], str]] = None,
+) -> list[str]:
     """Build the SUMO command for one training-network run."""
-    sumo_cmd = [config.sumo_binary, "-c", config.sumo_config_path]
+    resolved_sumo_cfg_path = (
+        str(Path(sumo_cfg_path))
+        if sumo_cfg_path is not None
+        else config.sumo_config_path
+    )
+    sumo_cmd = [config.sumo_binary, "-c", resolved_sumo_cfg_path]
     if seed is not None:
         sumo_cmd.extend(["--seed", str(seed)])
+    if scale is not None:
+        sumo_cmd.extend(["--scale", str(scale)])
     return sumo_cmd
 
 
@@ -52,6 +64,14 @@ def _resolve_model_path(
     )
 
 
+def _get_checkpoint_state_dim(checkpoint_state_dict: dict[str, torch.Tensor]) -> int:
+    """Infer the trained model input width from the first linear layer."""
+    input_layer_weights = checkpoint_state_dict.get("network.0.weight")
+    if input_layer_weights is None or input_layer_weights.ndim != 2:
+        raise RuntimeError("Unable to infer checkpoint input width from network.0.weight.")
+    return int(input_layer_weights.shape[1])
+
+
 def _get_episode_avg_speed(episode_metrics: dict[str, float]) -> float:
     """Convert accumulated speed totals into one episode-average value."""
     metric_steps = episode_metrics["metric_steps"]
@@ -68,28 +88,42 @@ def _get_state_dim(state_dict: dict[str, list[float]]) -> int:
 
 
 def _pad_state_vector(state_vector: list[float], target_dim: int) -> list[float]:
-    """Pad one traffic-light state so every TLS matches the model input width."""
+    """Resize one traffic-light state so every TLS matches the model input width."""
     if len(state_vector) > target_dim:
-        raise RuntimeError(
-            f"State dimension {len(state_vector)} exceeds configured model input {target_dim}."
-        )
+        if target_dim <= 0:
+            raise RuntimeError(f"Configured model input {target_dim} is invalid.")
+        # Keep the leading lane features and preserve the phase value at the end.
+        if target_dim == 1:
+            return [state_vector[-1]]
+        return state_vector[: target_dim - 1] + [state_vector[-1]]
     if len(state_vector) == target_dim:
         return state_vector
     return state_vector + [0.0] * (target_dim - len(state_vector))
 
 
-def evaluate_model(model_path: Optional[Union[os.PathLike[str], str]] = None) -> pd.DataFrame:
-    """Evaluate the trained model on the ingolstadt21 network for five fixed seeds."""
+def evaluate_model(
+    model_path: Optional[Union[os.PathLike[str], str]] = None,
+    network_name: str = "cologne3",
+    sumo_cfg_name: Optional[str] = None,
+    scale: Optional[float] = 0.5,
+    results_filename: str = "cologne3_low_results.xlsx",
+    demand_label: str = "LOW",
+) -> pd.DataFrame:
+    """Evaluate the trained model on one network for five fixed seeds."""
     config = Config()
     output_dir = Path(__file__).resolve().parent / "training_artifacts"
-    sumo_cfg_path = (
+    network_dir = (
         Path(__file__).resolve().parent.parent
         / "traffic_networks"
         / "Main_training_real"
-        / "ingolstadt21"
-        / "ingolstadt21.sumocfg"
+        / network_name
     )
-    results_path = output_dir / "ingolstadt21_results.xlsx"
+    resolved_sumo_cfg_name = sumo_cfg_name or f"{network_name}.sumocfg"
+    sumo_cfg_path = (
+        network_dir
+        / resolved_sumo_cfg_name
+    )
+    results_path = output_dir / results_filename
     evaluation_seeds = [0, 1, 2, 3, 4]
     epsilon = 0.0
     action_dim = 2
@@ -109,9 +143,19 @@ def evaluate_model(model_path: Optional[Union[os.PathLike[str], str]] = None) ->
     if traci.isLoaded():
         traci.close()
 
+    checkpoint_state_dict = torch.load(checkpoint_path, map_location="cpu")
+    checkpoint_state_dim = _get_checkpoint_state_dim(checkpoint_state_dict)
+
     print("USING SUMO CONFIG:", str(sumo_cfg_path))
+    print("USING SUMO SCALE:", scale if scale is not None else "default")
+    print("USING CHECKPOINT:", str(checkpoint_path))
     env = TrafficLightEnv(
-        [config.sumo_binary, "-c", str(sumo_cfg_path), "--seed", str(evaluation_seeds[0])]
+        _build_sumo_cmd(
+            config,
+            seed=evaluation_seeds[0],
+            scale=scale,
+            sumo_cfg_path=sumo_cfg_path,
+        )
     )
 
     try:
@@ -120,15 +164,9 @@ def evaluate_model(model_path: Optional[Union[os.PathLike[str], str]] = None) ->
         if not tls_ids:
             raise RuntimeError("No traffic lights found in the SUMO network.")
 
-        state_dim = _get_state_dim(state_dict)
+        state_dim = checkpoint_state_dim
         model = TrafficModel(state_dim=state_dim, action_dim=action_dim)
-        try:
-            model.load_state_dict(torch.load(checkpoint_path, map_location="cpu"))
-        except RuntimeError as exc:
-            print(
-                "WARNING: Skipping checkpoint load due to incompatible state size for "
-                f"{checkpoint_path}: {exc}"
-            )
+        model.load_state_dict(checkpoint_state_dict)
         model.eval()
 
         results = []
@@ -136,15 +174,14 @@ def evaluate_model(model_path: Optional[Union[os.PathLike[str], str]] = None) ->
         for episode_index, seed in enumerate(evaluation_seeds, start=1):
             random.seed(seed)
             torch.manual_seed(seed)
-            env.sumo_cmd = [config.sumo_binary, "-c", str(sumo_cfg_path), "--seed", str(seed)]
+            env.sumo_cmd = _build_sumo_cmd(
+                config,
+                seed=seed,
+                scale=scale,
+                sumo_cfg_path=sumo_cfg_path,
+            )
             state_dict = env.reset()
             tls_ids = env.get_all_tls_ids()
-            episode_state_dim = _get_state_dim(state_dict)
-            if episode_state_dim != state_dim:
-                raise RuntimeError(
-                    "State dimension changed between evaluation resets: "
-                    f"expected {state_dim}, got {episode_state_dim}."
-                )
 
             action_dict = {tls_id: 0 for tls_id in tls_ids}
             last_info: dict[str, dict[str, float]] = {
@@ -200,7 +237,7 @@ def evaluate_model(model_path: Optional[Union[os.PathLike[str], str]] = None) ->
         results_df.to_excel(results_path, index=False)
 
         average_metrics = results_df[metric_columns].mean()
-        print("\nEvaluation averages across 5 episodes:")
+        print(f"\n{network_name} - {demand_label} demand results")
         for metric_name in metric_columns:
             print(f"{metric_name}: {average_metrics[metric_name]:.4f}")
         print(f"\nSaved evaluation results to {results_path}")
