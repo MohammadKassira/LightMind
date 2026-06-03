@@ -1,0 +1,10 @@
+# System dependency: SUMO (sumo.dlr.de) — required for OSM conversion and real training
+# Mac: brew install sumo
+# After install: export SUMO_HOME=/opt/homebrew/share/sumo
+# randomTrips.py must be on PATH: export PATH=$SUMO_HOME/tools:$PATH
+fastapi==0.116.1
+python-multipart==0.0.20
+uvicorn[standard]==0.35.0
+anthropic>=0.40.0
+python-dotenv>=1.0.0
+sumolib
