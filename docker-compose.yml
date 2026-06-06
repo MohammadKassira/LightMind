@@ -1,0 +1,25 @@
+services:
+  backend:
+    build:
+      context: ./traffic-rl-website/backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./traffic-rl-website/backend/data:/app/data
+    environment:
+      - SUMO_HOME=/usr/share/sumo
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./traffic-rl-website/frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
