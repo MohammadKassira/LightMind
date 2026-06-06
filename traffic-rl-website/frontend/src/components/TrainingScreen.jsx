@@ -1,8 +1,20 @@
 import { useEffect, useRef, useState } from "react";
-import LiveMap from "./LiveMap";
+import {
+  CategoryScale,
+  Chart as ChartJS,
+  Filler,
+  Legend,
+  LineElement,
+  LinearScale,
+  PointElement,
+  Tooltip,
+} from "chart.js";
+import { Line } from "react-chartjs-2";
 import MetricsPanel from "./MetricsPanel";
 
-const API_BASE = "http://localhost:8000";
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend);
+
+import { API_BASE, WS_BASE } from "../config";
 
 const DEFAULT_SNAPSHOT = {
   episode: 0,
@@ -22,10 +34,9 @@ const DEFAULT_SNAPSHOT = {
   baseline: { reward: 0, waiting_time: 0, queue_length: 0, throughput: 0 },
 };
 
+// Stages after skipping OSM validation + conversion
 const STAGE_ORDER = [
   "initialization",
-  "osm_validation",
-  "osm_to_sumo_conversion",
   "traffic_light_detection",
   "random_route_generation",
   "scenario_manifest_creation",
@@ -53,9 +64,32 @@ function fmtElapsed(sec) {
     : `${m}:${String(s).padStart(2, "0")}`;
 }
 
+// ─── KPI helpers ─────────────────────────────────────────────────────────────
+
+function fmtKpi(val, decimals, unit, loading) {
+  if (val == null) return loading ? "Loading…" : "—";
+  const n = typeof val === "number" ? val : parseFloat(val);
+  return isNaN(n) ? "—" : `${n.toFixed(decimals)}${unit}`;
+}
+
+function KpiCard({ label, value, tone = "text-cyan-100" }) {
+  return (
+    <div className="rounded-2xl border border-white/8 bg-slate-950/50 px-4 py-3">
+      <p className="text-xs text-slate-500">{label}</p>
+      <p className={`mt-1 text-xl font-semibold ${tone}`}>{value}</p>
+    </div>
+  );
+}
+
+function fmt(val, unit = "") {
+  if (val == null) return "—";
+  const n = typeof val === "number" ? val : parseFloat(val);
+  return isNaN(n) ? "—" : `${n.toFixed(1)}${unit}`;
+}
+
 // ─── Real training view ──────────────────────────────────────────────────────
 
-function RealTrainingView({ sessionId, osmAbsPath, onComplete, onReset }) {
+function RealTrainingView({ sessionId, netAbsPath, runBaseline, greenDuration, onComplete, onReset }) {
   const [status, setStatus] = useState({
     stage: "initializing",
     label: "Initializing job…",
@@ -63,22 +97,29 @@ function RealTrainingView({ sessionId, osmAbsPath, onComplete, onReset }) {
     completed_stages: [],
   });
   const [failed, setFailed] = useState(null);
-  const [progress, setProgress] = useState({ current_episode: 0, total_episodes: 500, phase: "waiting", available: false });
+  const [progress, setProgress] = useState({ current_episode: 0, phase: "waiting", available: false });
   const [activityFeed, setActivityFeed] = useState([]);
   const [elapsedSec, setElapsedSec] = useState(0);
+  const [episodeMetrics, setEpisodeMetrics] = useState(null); // full /episode-metrics response
+  const [rewardHistory, setRewardHistory] = useState([]);
+  const [baselinePhase, setBaselinePhase] = useState(null); // null | "running" | "done"
+  const [baselineRunsDone, setBaselineRunsDone] = useState(0);
 
   const statusTimerRef = useRef(null);
   const progressTimerRef = useRef(null);
   const clockTimerRef = useRef(null);
+  const metricsTimerRef = useRef(null);
+  const baselineTimerRef = useRef(null);
   const onCompleteRef = useRef(onComplete);
   const prevEpisodeRef = useRef(0);
   const prevLogCountRef = useRef(0);
+  const latestKpisRef = useRef(null); // for attaching to activity log entries
   const feedRef = useRef(null);
+  const dqnCompleteRef = useRef(false);
 
-  // Keep onComplete ref current without re-triggering effects
   useEffect(() => { onCompleteRef.current = onComplete; });
 
-  // Elapsed-time clock — reads start time from localStorage so it survives a page refresh
+  // Elapsed-time clock
   useEffect(() => {
     const key = `lm_train_start_${sessionId}`;
     let stored = localStorage.getItem(key);
@@ -87,14 +128,13 @@ function RealTrainingView({ sessionId, osmAbsPath, onComplete, onReset }) {
       localStorage.setItem(key, stored);
     }
     const startMs = parseInt(stored, 10);
-
     clockTimerRef.current = setInterval(() => {
       setElapsedSec(Math.floor((Date.now() - startMs) / 1000));
     }, 1000);
     return () => clearInterval(clockTimerRef.current);
   }, [sessionId]);
 
-  // Fetch network stats once and seed the activity feed with a "started" entry
+  // Seed activity feed with network stats
   useEffect(() => {
     fetch(`${API_BASE}/api/sessions/${sessionId}/network`)
       .then((r) => r.json())
@@ -111,20 +151,40 @@ function RealTrainingView({ sessionId, osmAbsPath, onComplete, onReset }) {
       });
   }, [sessionId]);
 
-  // Auto-scroll activity feed to bottom
+  // Auto-scroll feed
   useEffect(() => {
     if (feedRef.current) feedRef.current.scrollTop = feedRef.current.scrollHeight;
   }, [activityFeed]);
 
-  // Start job + poll status (3 s) and progress/logs (10 s)
+  // Poll live episode metrics every 5 seconds
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/real-train/${sessionId}/episode-metrics`);
+        const data = await res.json();
+        if (data.available) {
+          setEpisodeMetrics(data);
+          latestKpisRef.current = data.latest_kpis;
+          const rewards = data.reward_history || [];
+          if (rewards.length > 0) {
+            setRewardHistory(rewards.slice(-80));
+          }
+        }
+      } catch {}
+    };
+    fetchMetrics();
+    metricsTimerRef.current = setInterval(fetchMetrics, 5000);
+    return () => clearInterval(metricsTimerRef.current);
+  }, [sessionId]);
+
+  // Start job + poll status (3s) + progress/logs (10s)
   useEffect(() => {
     fetch(`${API_BASE}/api/real-train/start`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ session_id: sessionId, osm_path: osmAbsPath }),
+      body: JSON.stringify({ session_id: sessionId, net_path: netAbsPath }),
     }).catch(() => {});
 
-    // Stage-level status poll
     statusTimerRef.current = setInterval(async () => {
       try {
         const res = await fetch(`${API_BASE}/api/real-train/${sessionId}/status`);
@@ -135,14 +195,28 @@ function RealTrainingView({ sessionId, osmAbsPath, onComplete, onReset }) {
           clearInterval(statusTimerRef.current);
           clearInterval(progressTimerRef.current);
         } else if (data.stage === "complete" && data.status === "passed") {
-          clearInterval(statusTimerRef.current);
-          clearInterval(progressTimerRef.current);
-          onCompleteRef.current();
+          if (!dqnCompleteRef.current) {
+            dqnCompleteRef.current = true;
+            if (runBaseline) {
+              setBaselinePhase("running");
+              clearInterval(statusTimerRef.current);
+              clearInterval(progressTimerRef.current);
+              // Kick off baseline
+              fetch(`${API_BASE}/api/real-train/${sessionId}/run-baseline`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ green_duration_s: greenDuration || 60 }),
+              }).catch(() => {});
+            } else {
+              clearInterval(statusTimerRef.current);
+              clearInterval(progressTimerRef.current);
+              onCompleteRef.current();
+            }
+          }
         }
       } catch {}
     }, 3000);
 
-    // Episode-level progress + backend logs poll
     const pollProgress = async () => {
       try {
         const [progRes, logsRes] = await Promise.all([
@@ -151,45 +225,35 @@ function RealTrainingView({ sessionId, osmAbsPath, onComplete, onReset }) {
         ]);
         const prog = await progRes.json();
         const logsData = await logsRes.json();
-
         setProgress(prog);
 
         const newEntries = [];
-
-        // New backend log entries not yet shown
         const logs = logsData.logs ?? [];
         const alreadyShown = prevLogCountRef.current;
         for (let i = alreadyShown; i < logs.length; i++) {
-          newEntries.push({
-            id: `log-${i}`,
-            time: new Date(logs[i].time + "Z").toLocaleTimeString(),
-            msg: logs[i].message,
-          });
+          newEntries.push({ id: `log-${i}`, time: new Date(logs[i].time + "Z").toLocaleTimeString(), msg: logs[i].message });
         }
         prevLogCountRef.current = logs.length;
 
-        // Frontend-generated episode completion entries
         const curEp = prog.current_episode ?? 0;
         const prevEp = prevEpisodeRef.current;
         if (curEp > prevEp) {
           const ts = new Date().toLocaleTimeString();
+          const kpis = latestKpisRef.current; // snapshot current KPIs for this batch
           if (curEp - prevEp <= 5) {
             for (let ep = prevEp + 1; ep <= curEp; ep++) {
               const note = ep <= 20 ? " — agent exploring" : ep <= 150 ? " — reward improving" : "";
-              newEntries.push({ id: `ep-${ep}`, time: ts, msg: `Episode ${ep} complete${note}` });
+              newEntries.push({ id: `ep-${ep}`, time: ts, msg: `Episode ${ep} complete${note}`, kpis });
             }
           } else {
-            newEntries.push({ id: `ep-${prevEp + 1}`, time: ts, msg: `Episode ${prevEp + 1} complete — agent exploring` });
-            newEntries.push({ id: `ep-gap-${curEp}`, time: "", msg: `  … ${curEp - prevEp - 2} more episodes …` });
+            newEntries.push({ id: `ep-${prevEp + 1}`, time: ts, msg: `Episode ${prevEp + 1} complete — agent exploring`, kpis: null });
+            newEntries.push({ id: `ep-gap-${curEp}`, time: "", msg: `  … ${curEp - prevEp - 2} more episodes …`, kpis: null });
             const note = curEp <= 150 ? " — reward improving" : "";
-            newEntries.push({ id: `ep-${curEp}`, time: ts, msg: `Episode ${curEp} complete${note}` });
+            newEntries.push({ id: `ep-${curEp}`, time: ts, msg: `Episode ${curEp} complete${note}`, kpis });
           }
           prevEpisodeRef.current = curEp;
         }
-
-        if (newEntries.length > 0) {
-          setActivityFeed((prev) => [...prev, ...newEntries].slice(-60));
-        }
+        if (newEntries.length > 0) setActivityFeed((prev) => [...prev, ...newEntries].slice(-60));
       } catch {}
     };
 
@@ -200,21 +264,67 @@ function RealTrainingView({ sessionId, osmAbsPath, onComplete, onReset }) {
       clearInterval(statusTimerRef.current);
       clearInterval(progressTimerRef.current);
     };
-  }, [sessionId, osmAbsPath]); // onComplete intentionally excluded — using ref
+  }, [sessionId, netAbsPath, runBaseline]);
+
+  // Poll baseline status
+  useEffect(() => {
+    if (baselinePhase !== "running") return;
+    baselineTimerRef.current = setInterval(async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/real-train/${sessionId}/baseline-status`);
+        const data = await res.json();
+        setBaselineRunsDone(data.runs_complete ?? 0);
+        if (data.status === "complete") {
+          setBaselinePhase("done");
+          clearInterval(baselineTimerRef.current);
+          onCompleteRef.current();
+        } else if (data.status === "failed") {
+          setBaselinePhase("done");
+          clearInterval(baselineTimerRef.current);
+          onCompleteRef.current();
+        }
+      } catch {}
+    }, 5000);
+    return () => clearInterval(baselineTimerRef.current);
+  }, [baselinePhase, sessionId]);
 
   const completedSet = new Set((status.completed_stages ?? []).map((s) => s.stage));
-  const { current_episode, total_episodes } = progress;
-  const episodePct = total_episodes > 0 ? Math.round((current_episode / total_episodes) * 100) : 0;
+  const current_episode = episodeMetrics?.current_episode ?? progress.current_episode ?? 0;
+  const convergencePct = episodeMetrics?.convergence_pct ?? null; // null = not yet known
 
-  // ETA estimation
-  let etaLabel = "Calculating…";
-  if (current_episode > 0 && elapsedSec > 0) {
-    const secPerEp = elapsedSec / current_episode;
-    const remaining = (total_episodes - current_episode) * secPerEp;
-    const h = Math.floor(remaining / 3600);
-    const m = Math.floor((remaining % 3600) / 60);
-    etaLabel = h > 0 ? `~${h}h ${m}m remaining` : `~${m}m remaining`;
-  }
+  // Pipeline progress: during DQN training blend stage (35%) with convergence (35→75%)
+  const combinedProgress = (() => {
+    if (status?.stage === "independent_dqn_training") {
+      const conv = convergencePct ?? 0;
+      return Math.min(Math.round(35 + (conv / 100) * 40), 75);
+    }
+    return Math.min(status?.progress_pct ?? 0, 100);
+  })();
+
+  // Reward chart data
+  const rewardChartData = rewardHistory.length > 1 ? {
+    labels: rewardHistory.map((_, i) => `E${i + 1}`),
+    datasets: [{
+      label: "Episode Reward",
+      data: rewardHistory.map((r) => typeof r === "number" ? r : r?.reward ?? r),
+      borderColor: "#33d4ff",
+      backgroundColor: "rgba(51,212,255,0.08)",
+      fill: true,
+      tension: 0.35,
+      pointRadius: 0,
+      borderWidth: 1.5,
+    }],
+  } : null;
+
+  const rewardChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { display: false },
+      y: { ticks: { color: "#64748b", font: { size: 10 } }, grid: { color: "rgba(148,163,184,0.06)" } },
+    },
+  };
 
   return (
     <section className="space-y-5">
@@ -224,16 +334,23 @@ function RealTrainingView({ sessionId, osmAbsPath, onComplete, onReset }) {
           <p className="text-xs uppercase tracking-[0.35em] text-cyan-200/80">Real Training Session</p>
           <h2 className="mt-2 text-3xl font-semibold tracking-tight">LightMind Real Training</h2>
           <p className="mt-2 text-sm text-slate-400">
-            Training Independent DQN v2 on your uploaded map with real SUMO simulation.
+            Training Independent DQN v2 on your uploaded SUMO network with real simulation.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-4 py-2 text-sm font-medium text-emerald-100">
-            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-trafficGreen shadow-[0_0_16px_rgba(34,197,94,0.9)]" />
-            Running
-          </div>
+          {baselinePhase === "running" ? (
+            <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/25 bg-amber-400/10 px-4 py-2 text-sm font-medium text-amber-100">
+              <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-amber-400" />
+              Baseline {baselineRunsDone}/9
+            </div>
+          ) : (
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-4 py-2 text-sm font-medium text-emerald-100">
+              <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-trafficGreen shadow-[0_0_16px_rgba(34,197,94,0.9)]" />
+              Running
+            </div>
+          )}
           <div className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-100">
-            {status.progress_pct ?? 0}% pipeline
+            {combinedProgress}% pipeline
           </div>
           <div className="rounded-full border border-slate-400/20 bg-slate-400/10 px-4 py-2 text-sm text-slate-300">
             {fmtElapsed(elapsedSec)} elapsed
@@ -248,10 +365,17 @@ function RealTrainingView({ sessionId, osmAbsPath, onComplete, onReset }) {
         </div>
       </div>
 
-      {/* Banner */}
-      <div className="rounded-3xl border border-amber-400/30 bg-amber-400/10 px-6 py-4 text-sm text-amber-200">
-        Real DQN training is running on your network. SUMO is simulating traffic headlessly. Do not close this tab. Training takes 30–240 minutes depending on map size.
-      </div>
+      {baselinePhase !== "running" && (
+        <div className="rounded-3xl border border-amber-400/30 bg-amber-400/10 px-6 py-4 text-sm text-amber-200">
+          Real DQN training is running on your network. SUMO is simulating traffic headlessly. Do not close this tab. Training takes 30–240 minutes depending on map size.
+        </div>
+      )}
+
+      {baselinePhase === "running" && (
+        <div className="rounded-3xl border border-amber-400/30 bg-amber-400/10 px-6 py-4 text-sm text-amber-200">
+          Running Fixed-Time baseline… (run {baselineRunsDone}/9 — 3 seeds × Low/Medium/High)
+        </div>
+      )}
 
       {failed && (
         <div className="rounded-3xl border border-red-400/30 bg-red-400/10 px-6 py-4 text-sm text-red-200">
@@ -259,70 +383,116 @@ function RealTrainingView({ sessionId, osmAbsPath, onComplete, onReset }) {
         </div>
       )}
 
-      {/* Episode progress (visible once DQN training begins) */}
+      {/* Episode progress */}
       {current_episode > 0 && (
         <div className="glass-panel px-6 py-5 space-y-3">
           <div className="flex items-baseline justify-between">
             <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-cyan-200/80">DQN Episode Progress</p>
+              <p className="text-xs uppercase tracking-[0.3em] text-cyan-200/80">Episode Progress</p>
               <p className="mt-2 text-4xl font-bold tracking-tight">
                 Episode <span className="text-cyan-300">{current_episode}</span>
-                <span className="text-xl font-normal text-slate-500"> / {total_episodes}</span>
+                <span className="ml-3 text-lg font-normal text-slate-400">
+                  · Running for {fmtElapsed(elapsedSec)}
+                </span>
               </p>
             </div>
-            <div className="text-right text-sm text-slate-400">
-              <p>{etaLabel}</p>
-              <p className="mt-1 text-xs text-slate-500">{episodePct}% of episodes</p>
-            </div>
+            {convergencePct != null && (
+              <div className="text-right text-sm text-slate-400">
+                <p className="text-emerald-300 font-medium">{convergencePct}% converged</p>
+              </div>
+            )}
           </div>
+          {/* Convergence bar: indeterminate when unknown, filled when available */}
           <div className="h-2.5 w-full rounded-full bg-slate-800 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400 transition-all duration-1000"
-              style={{ width: `${episodePct}%` }}
-            />
+            {convergencePct != null ? (
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400 transition-all duration-1000"
+                style={{ width: `${Math.min(convergencePct, 100)}%` }}
+              />
+            ) : (
+              <div className="h-full w-1/3 rounded-full bg-gradient-to-r from-cyan-400/60 to-emerald-400/60 animate-pulse" />
+            )}
           </div>
+          <p className="text-xs text-slate-500">Training until convergence</p>
         </div>
       )}
 
-      {/* Map + pipeline checklist */}
-      <div className="grid gap-5 xl:grid-cols-[1.4fr_0.9fr]">
-        {/* Left: headless map + activity feed */}
-        <div className="flex flex-col gap-4">
-          <LiveMap
-            key={sessionId}
-            sessionId={sessionId}
-            cars={[]}
-            lights={[]}
-            mapCenter={null}
-            activeDemandLevel={null}
-            headlessLabel="SUMO running headlessly — real road network shown"
-          />
+      {/* Live episode KPI cards */}
+      {current_episode > 0 && (
+        <div className="glass-panel px-6 py-5">
+          <p className="text-xs uppercase tracking-[0.3em] text-cyan-200/80 mb-4">
+            Live Episode Metrics — Episode {current_episode}
+          </p>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <KpiCard
+              label="Waiting Time"
+              value={fmtKpi(episodeMetrics?.latest_kpis?.waiting_time, 1, "s", !episodeMetrics)}
+              tone="text-cyan-100"
+            />
+            <KpiCard
+              label="Queue Length"
+              value={fmtKpi(episodeMetrics?.latest_kpis?.queue_length, 0, "m", !episodeMetrics)}
+              tone="text-amber-100"
+            />
+            <KpiCard
+              label="Throughput"
+              value={fmtKpi(episodeMetrics?.latest_kpis?.throughput, 0, " trips", !episodeMetrics)}
+              tone="text-emerald-100"
+            />
+            <KpiCard
+              label="Phase Change Rate"
+              value={episodeMetrics?.latest_kpis?.phase_change_rate != null ? fmtKpi(episodeMetrics.latest_kpis.phase_change_rate, 2, "/min", false) : (episodeMetrics ? "—" : "Loading…")}
+              tone="text-slate-300"
+            />
+          </div>
 
-          {/* Activity feed */}
-          <div className="glass-panel p-4">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="text-xs uppercase tracking-[0.3em] text-cyan-200/80">Training Activity</p>
-              <span className="text-xs text-slate-500">{activityFeed.length} events</span>
+          {/* Running reward chart */}
+          {rewardChartData && (
+            <div className="mt-4">
+              <p className="mb-2 text-xs text-slate-500">Reward trend</p>
+              <div className="h-20">
+                <Line data={rewardChartData} options={rewardChartOptions} />
+              </div>
             </div>
-            <div
-              ref={feedRef}
-              className="max-h-[11.25rem] space-y-1 overflow-y-auto rounded-2xl border border-white/6 bg-slate-950/70 p-3 font-mono text-xs"
-            >
-              {activityFeed.length === 0 ? (
-                <p className="text-slate-600">Waiting for training to start…</p>
-              ) : (
-                activityFeed.map((entry) => (
-                  <div key={entry.id} className="flex gap-2 leading-relaxed">
+          )}
+        </div>
+      )}
+
+      {/* Activity feed + pipeline checklist */}
+      <div className="grid gap-5 xl:grid-cols-[1.6fr_0.9fr]">
+        {/* Activity feed */}
+        <div className="glass-panel p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <p className="text-xs uppercase tracking-[0.3em] text-cyan-200/80">Training Activity</p>
+            <span className="text-xs text-slate-500">{activityFeed.length} events</span>
+          </div>
+          <div
+            ref={feedRef}
+            className="max-h-72 space-y-1 overflow-y-auto rounded-2xl border border-white/6 bg-slate-950/70 p-3 font-mono text-xs"
+          >
+            {activityFeed.length === 0 ? (
+              <p className="text-slate-600">Waiting for training to start…</p>
+            ) : (
+              activityFeed.map((entry) => (
+                <div key={entry.id} className="mb-1 last:mb-0">
+                  <div className="flex gap-2 leading-relaxed">
                     <span className="shrink-0 text-slate-600">{entry.time}</span>
                     <span className={logColor(entry.msg)}>{entry.msg}</span>
                   </div>
-                ))
-              )}
-            </div>
+                  {entry.kpis && (entry.kpis.waiting_time != null || entry.kpis.throughput != null) && (
+                    <p className="pl-[4.5rem] text-slate-600 leading-relaxed">
+                      {entry.kpis.waiting_time != null && `Waiting: ${entry.kpis.waiting_time.toFixed(1)}s`}
+                      {entry.kpis.queue_length != null && ` · Queue: ${Math.round(entry.kpis.queue_length)}m`}
+                      {entry.kpis.throughput != null && ` · Throughput: ${entry.kpis.throughput.toLocaleString()}`}
+                    </p>
+                  )}
+                </div>
+              ))
+            )}
           </div>
         </div>
 
-        {/* Right: pipeline stage checklist */}
+        {/* Pipeline stage checklist */}
         <div className="glass-panel p-6 space-y-4">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-cyan-200/80">Current Stage</p>
@@ -331,11 +501,11 @@ function RealTrainingView({ sessionId, osmAbsPath, onComplete, onReset }) {
           <div className="h-2.5 w-full rounded-full bg-slate-800 overflow-hidden">
             <div
               className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400 transition-all duration-700"
-              style={{ width: `${status.progress_pct ?? 0}%` }}
+              style={{ width: `${combinedProgress}%` }}
             />
           </div>
           <p className="text-xs text-slate-500">
-            {status.progress_pct ?? 0}% — session {sessionId.slice(0, 12)}…
+            {combinedProgress}% — session {sessionId.slice(0, 12)}…
           </p>
           <div className="mt-4 space-y-2">
             {STAGE_ORDER.filter((s) => s !== "complete").map((s) => {
@@ -353,6 +523,17 @@ function RealTrainingView({ sessionId, osmAbsPath, onComplete, onReset }) {
                 </div>
               );
             })}
+            {runBaseline && (
+              <div className={`flex items-center gap-3 text-sm ${
+                baselinePhase === "done" ? "text-emerald-300" :
+                baselinePhase === "running" ? "text-amber-200" : "text-slate-600"
+              }`}>
+                <span className="text-base">
+                  {baselinePhase === "done" ? "✓" : baselinePhase === "running" ? "›" : "○"}
+                </span>
+                <span>fixed time baseline ({baselinePhase === "running" ? `${baselineRunsDone}/9` : "9 runs"})</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -367,7 +548,7 @@ function FakeTrainingView({ sessionId, onComplete, onReset }) {
   const [rewardHistory, setRewardHistory] = useState([]);
   const [activityFeed, setActivityFeed] = useState([]);
   const [, setConnectionState] = useState("connecting");
-  const [mapCenter, setMapCenter] = useState(null);
+  const [, setMapCenter] = useState(null); // retained to avoid refactoring WS payload handler
   const socketRef = useRef(null);
   const feedRef = useRef(null);
 
@@ -386,7 +567,7 @@ function FakeTrainingView({ sessionId, onComplete, onReset }) {
     setActivityFeed([]);
     setConnectionState("connecting");
 
-    const socket = new WebSocket(`ws://localhost:8000/ws/live/${sessionId}`);
+    const socket = new WebSocket(`${WS_BASE}/ws/live/${sessionId}`);
     socketRef.current = socket;
 
     socket.onopen = () => { if (isCurrentSession) setConnectionState("live"); };
@@ -479,14 +660,6 @@ function FakeTrainingView({ sessionId, onComplete, onReset }) {
 
       <div className="grid gap-5 xl:grid-cols-[1.4fr_0.9fr]">
         <div className="flex flex-col gap-4">
-          <LiveMap
-            key={sessionId}
-            sessionId={sessionId}
-            cars={snapshot.cars}
-            lights={snapshot.lights}
-            mapCenter={mapCenter}
-            activeDemandLevel={snapshot.active_demand_level}
-          />
           <div className="glass-panel p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <p className="text-xs uppercase tracking-[0.3em] text-cyan-200/80">Network Activity Feed</p>
@@ -494,7 +667,7 @@ function FakeTrainingView({ sessionId, onComplete, onReset }) {
             </div>
             <div
               ref={feedRef}
-              className="max-h-[11.25rem] space-y-1 overflow-y-auto rounded-2xl border border-white/6 bg-slate-950/70 p-3 font-mono text-xs"
+              className="max-h-72 space-y-1 overflow-y-auto rounded-2xl border border-white/6 bg-slate-950/70 p-3 font-mono text-xs"
             >
               {activityFeed.length === 0 ? (
                 <p className="text-slate-600">Waiting for first episode…</p>
@@ -525,7 +698,7 @@ function FakeTrainingView({ sessionId, onComplete, onReset }) {
 
 // ─── Root — routes to real vs demo view ─────────────────────────────────────
 
-export default function TrainingScreen({ sessionId, osmAbsPath, onComplete, onReset }) {
+export default function TrainingScreen({ sessionId, netAbsPath, runBaseline, greenDuration, onComplete, onReset }) {
   const [mode, setMode] = useState(null);
 
   useEffect(() => {
@@ -545,7 +718,16 @@ export default function TrainingScreen({ sessionId, osmAbsPath, onComplete, onRe
   }
 
   if (mode === "real") {
-    return <RealTrainingView sessionId={sessionId} osmAbsPath={osmAbsPath} onComplete={onComplete} onReset={onReset} />;
+    return (
+      <RealTrainingView
+        sessionId={sessionId}
+        netAbsPath={netAbsPath}
+        runBaseline={runBaseline}
+        greenDuration={greenDuration}
+        onComplete={onComplete}
+        onReset={onReset}
+      />
+    );
   }
 
   return <FakeTrainingView sessionId={sessionId} onComplete={onComplete} onReset={onReset} />;

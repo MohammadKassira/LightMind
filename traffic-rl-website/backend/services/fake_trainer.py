@@ -98,12 +98,12 @@ def save_status(session_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     return payload
 
 
-def create_status(session_id: str, osm_filename: str) -> dict[str, Any]:
+def create_status(session_id: str, osm_filename: str | None = None, net_filename: str | None = None) -> dict[str, Any]:
     payload = {
         "session_id": session_id,
         "created_at": now_iso(),
         "updated_at": now_iso(),
-        "osm_filename": osm_filename,
+        "net_filename": net_filename or osm_filename or "uploaded_map.net.xml",
         "demand_filename": None,
         "training": {
             "status": "idle",
@@ -169,7 +169,64 @@ def complete_training(
 # OSM parsing
 # ---------------------------------------------------------------------------
 
+def _parse_net_xml(session_id: str) -> dict[str, Any] | None:
+    """Extract map data from an uploaded SUMO .net.xml file for demo visualization."""
+    net_path = session_upload_dir(session_id) / "uploaded_map.net.xml"
+    if not net_path.exists():
+        return None
+    try:
+        from services.osm_converter import extract_network_data, get_network_summary  # noqa: PLC0415
+        network_data = extract_network_data(str(net_path))
+        summary = get_network_summary(network_data, str(net_path))
+
+        tls_raw = summary.get("traffic_lights", [])
+        traffic_lights = [{"id": tl.get("id", f"J{i}"), "lat": tl["lat"], "lng": tl["lon"]} for i, tl in enumerate(tls_raw)]
+
+        road_pairs: list[tuple[dict, dict]] = []
+        for seg in summary.get("road_segments", []):
+            coords = seg.get("coords", [])
+            for i in range(len(coords) - 1):
+                road_pairs.append((
+                    {"lat": coords[i]["lat"], "lng": coords[i]["lon"]},
+                    {"lat": coords[i + 1]["lat"], "lng": coords[i + 1]["lon"]},
+                ))
+
+        all_lats = [tl["lat"] for tl in tls_raw if tl.get("lat")]
+        all_lons = [tl["lon"] for tl in tls_raw if tl.get("lon")]
+        if all_lats:
+            center = {"lat": (min(all_lats) + max(all_lats)) / 2, "lng": (min(all_lons) + max(all_lons)) / 2}
+        elif road_pairs:
+            lats = [n["lat"] for pair in road_pairs for n in pair]
+            lngs = [n["lng"] for pair in road_pairs for n in pair]
+            center = {"lat": (min(lats) + max(lats)) / 2, "lng": (min(lngs) + max(lngs)) / 2}
+        else:
+            center = DEFAULT_CENTER
+
+        if not traffic_lights:
+            offsets = [(-0.0008, -0.0008), (-0.0008, 0.0008), (0.0008, -0.0008), (0.0008, 0.0008)]
+            traffic_lights = [{"lat": center["lat"] + dlat, "lng": center["lng"] + dlng} for dlat, dlng in offsets]
+
+        stats = summary.get("stats", {})
+        tl_count = stats.get("tl_count", 0)
+        junction_count = stats.get("junction_count", 0)
+        intersection_count = max(1, tl_count if tl_count > 0 else junction_count)
+
+        return {
+            "center": center,
+            "roads": road_pairs[:200],
+            "traffic_lights": traffic_lights[:8],
+            "intersection_count": intersection_count,
+        }
+    except Exception:
+        return None
+
+
 def parse_osm_file(session_id: str) -> dict[str, Any]:
+    # Try net.xml first (new upload format), then fall back to legacy map.osm
+    net_result = _parse_net_xml(session_id)
+    if net_result is not None:
+        return net_result
+
     osm_path = session_upload_dir(session_id) / "map.osm"
     if not osm_path.exists():
         return {"center": DEFAULT_CENTER, "roads": [], "traffic_lights": [], "intersection_count": 25}

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 
-const API_BASE = "http://localhost:8000";
+import { API_BASE } from "../config";
 const DEFAULT_CENTER = [33.8938, 35.5018];
 const DEMAND_RADIUS = { Low: 4, Medium: 5, High: 7 };
 const DEMAND_COLOR = { Low: "#60a5fa", Medium: "#33d4ff", High: "#f97316" };

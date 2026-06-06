@@ -14,7 +14,15 @@ _backend_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(_backend_dir))
 sys.path.insert(0, str(_backend_dir / "traffic_rl"))
 
-from traffic_rl.benchmark.controllers.independent_dqn_v2_web import run_web_job, WebJobConfig
+# Regenerate demand template on startup if missing
+try:
+    from services.template_generator import ensure_demand_template
+    ensure_demand_template()
+except Exception:
+    pass
+
+from traffic_rl.benchmark.controllers.independent_dqn_v2_web import WebJobConfig
+from services.net_trainer import run_web_job_from_net
 
 WEB_JOBS_ROOT = Path(__file__).parent.parent / "data" / "web_jobs"
 
@@ -101,10 +109,10 @@ def get_training_progress(session_id: str) -> dict:
     return result
 
 
-def build_config(session_id: str, osm_path: str) -> WebJobConfig:
+def build_config(session_id: str, net_path: str) -> WebJobConfig:
     return WebJobConfig(
         job_id=session_id,
-        osm_path=Path(osm_path),
+        osm_path=Path(net_path),  # osm_path field reused to carry the net.xml path
         output_root=WEB_JOBS_ROOT,
         network_name="uploaded_map",
         train_episodes=500,
@@ -113,7 +121,7 @@ def build_config(session_id: str, osm_path: str) -> WebJobConfig:
     )
 
 
-def start_real_training(session_id: str, osm_path: str) -> bool:
+def start_real_training(session_id: str, net_path: str) -> bool:
     """Start training in a background thread. Returns False if already running."""
     with _running_lock:
         if session_id in _running_sessions:
@@ -133,12 +141,12 @@ def start_real_training(session_id: str, osm_path: str) -> bool:
         _running_sessions.add(session_id)
 
     append_training_log(session_id, f"Real DQN training started — session {session_id[:12]}")
-    config = build_config(session_id, osm_path)
+    config = build_config(session_id, net_path)
 
     def run() -> None:
         _enforce_sumo_env()
         try:
-            run_web_job(config)
+            run_web_job_from_net(config)
             append_training_log(session_id, "Training pipeline completed successfully")
         except Exception as exc:
             status_path.parent.mkdir(parents=True, exist_ok=True)

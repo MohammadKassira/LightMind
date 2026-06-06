@@ -1,175 +1,195 @@
 import { useRef, useState } from "react";
+import * as XLSX from "xlsx";
 import logo from "../assets/lightmind-logo.png";
+import { parsePeriodSchedule, buildDemandData } from "../demandSchedule";
 
-const API_BASE = "http://localhost:8000";
-
-function UploadCard({
-  title,
-  description,
-  filename,
-  disabled,
-  accentClass,
-  buttonLabel,
-  accept,
-  inputRef,
-  onSelect,
-}) {
-  return (
-    <div className="glass-panel flex flex-col gap-4 p-6">
-      <div className="space-y-2">
-        <div className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em] ${accentClass}`}>
-          {title}
-        </div>
-        <p className="text-sm text-slate-300">{description}</p>
-      </div>
-      <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-400">
-        {filename || "No file uploaded yet"}
-      </div>
-      <input
-        ref={inputRef}
-        type="file"
-        accept={accept}
-        className="hidden"
-        onChange={onSelect}
-        disabled={disabled}
-      />
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => inputRef.current?.click()}
-        className="inline-flex items-center justify-center rounded-2xl border border-cyan-300/30 bg-cyan-400/10 px-4 py-3 text-sm font-medium text-cyan-100 transition hover:border-cyan-200/60 hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-slate-500"
-      >
-        {buttonLabel}
-      </button>
-    </div>
-  );
-}
+import { API_BASE } from "../config";
 
 export default function UploadScreen({
   sessionId,
   uploadedFiles,
   onSessionCreated,
-  onDemandUploaded,
+  onDemandParsed,
   onNext,
 }) {
-  const [isUploadingOsm, setIsUploadingOsm] = useState(false);
-  const [isUploadingDemand, setIsUploadingDemand] = useState(false);
+  const [isUploadingNet, setIsUploadingNet] = useState(false);
   const [error, setError] = useState("");
-  const [info, setInfo] = useState("");
-  // { state: "ok"|"warn"|"error", message: string }
-  const [sumoStatus, setSumoStatus] = useState(null);
-  const osmInputRef = useRef(null);
+  const [networkStatus, setNetworkStatus] = useState(null);
+
+  // Demand state (purely client-side — no upload needed)
+  const [demandFile, setDemandFile] = useState(null);
+  const [demandWarning, setDemandWarning] = useState("");
+  const [parsedDemand, setParsedDemand] = useState(null); // { sequence, periods, mixText, ... }
+  const [isParsing, setIsParsing] = useState(false);
+
+  const netInputRef = useRef(null);
   const demandInputRef = useRef(null);
 
-  const handleOsmUpload = async (event) => {
+  // ── Network upload ──────────────────────────────────────────────────────────
+
+  const handleNetUpload = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     setError("");
-    setInfo("");
-    setIsUploadingOsm(true);
+    setIsUploadingNet(true);
 
     try {
       const formData = new FormData();
       formData.append("file", file);
 
-      const response = await fetch(`${API_BASE}/api/upload/osm`, {
+      const response = await fetch(`${API_BASE}/api/upload/net`, {
         method: "POST",
         body: formData,
       });
 
       if (!response.ok) {
         const payload = await response.json();
-        throw new Error(payload.detail || "Failed to upload OSM file");
+        throw new Error(payload.detail || "Failed to upload network file");
       }
 
       const payload = await response.json();
-      onSessionCreated(payload.session_id, file.name, payload.osm_absolute_path || "");
-      setInfo(payload.message);
+      onSessionCreated(payload.session_id, file.name, payload.net_absolute_path || "");
 
-      if (payload.sumo_converted && payload.network_summary) {
-        const { tl_count, edge_count } = payload.network_summary.stats;
-        setSumoStatus({ state: "ok", message: `Network converted — ${tl_count} signals and ${edge_count} roads detected` });
-      } else if (payload.sumo_error) {
-        setSumoStatus({ state: "error", message: `Conversion failed — ${payload.sumo_error}` });
+      if (payload.network_summary) {
+        const { tl_count, edge_count } = payload.network_summary.stats || {};
+        setNetworkStatus({
+          state: "ok",
+          message: `Network loaded — ${tl_count ?? 0} traffic signals · ${edge_count ?? 0} road edges`,
+        });
       } else {
-        setSumoStatus({ state: "warn", message: "SUMO not installed — using map overlay only. Install SUMO for real network data." });
+        setNetworkStatus({
+          state: "warn",
+          message: "Network file accepted. Could not extract coordinate data — map overlay may be limited.",
+        });
       }
     } catch (uploadError) {
       setError(uploadError.message);
     } finally {
-      setIsUploadingOsm(false);
+      setIsUploadingNet(false);
       event.target.value = "";
     }
   };
 
-  const handleDemandUpload = async (event) => {
+  // ── Demand file parsing (client-side only) ──────────────────────────────────
+
+  const handleDemandFile = (event) => {
     const file = event.target.files?.[0];
-    if (!file || !sessionId) return;
+    if (!file) return;
+    setDemandFile(file);
+    setDemandWarning("");
+    setParsedDemand(null);
+    onDemandParsed(null);
+    setIsParsing(true);
 
-    setError("");
-    setInfo("");
-    setIsUploadingDemand(true);
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
 
-    try {
-      const formData = new FormData();
-      formData.append("session_id", sessionId);
-      formData.append("file", file);
+        if (rows.length < 2) {
+          setDemandWarning("File appears empty or has only a header row.");
+          setIsParsing(false);
+          return;
+        }
 
-      const response = await fetch(`${API_BASE}/api/upload/demand`, {
-        method: "POST",
-        body: formData,
-      });
+        // Try the known Period format (Day | Period | Demand_Level | Weight | Description)
+        const parsed = parsePeriodSchedule(rows);
 
-      if (!response.ok) {
-        const payload = await response.json();
-        throw new Error(payload.detail || "Failed to upload demand file");
+        if (!parsed) {
+          // Unknown format — send to Claude for normalization
+          await handleCustomFormat(rows);
+          setIsParsing(false);
+          return;
+        }
+
+        const { periods, warnings } = parsed;
+
+        if (warnings.length > 0) {
+          setDemandWarning(`${warnings.length} row${warnings.length > 1 ? "s" : ""} skipped: ${warnings.slice(0, 2).join("; ")}`);
+        }
+
+        if (periods.length === 0) {
+          setDemandWarning("No valid periods found. Check Demand_Level is Low/Medium/High and Weight is a positive integer.");
+          setIsParsing(false);
+          return;
+        }
+
+        const demandData = buildDemandData(periods);
+        setParsedDemand(demandData);
+        onDemandParsed(demandData);
+      } catch (err) {
+        setDemandWarning(`Could not parse file: ${err.message}`);
+      } finally {
+        setIsParsing(false);
       }
+    };
+    reader.readAsArrayBuffer(file);
+    event.target.value = "";
+  };
 
-      await response.json();
-      onDemandUploaded(file.name);
-      setInfo("Demand file uploaded successfully");
-    } catch (uploadError) {
-      setError(uploadError.message);
-    } finally {
-      setIsUploadingDemand(false);
-      event.target.value = "";
+  const handleCustomFormat = async (rows) => {
+    try {
+      const tableText = rows.map((r) => r.join("\t")).join("\n");
+      const res = await fetch(`${API_BASE}/api/parse-schedule`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          raw_table: tableText,
+          system_hint: "periods",
+        }),
+      });
+      if (!res.ok) throw new Error("Normalization failed");
+      const payload = await res.json();
+
+      // Expect [{period_name, demand_level, weight, description}]
+      const items = payload.periods || payload.schedule || [];
+      if (!items.length) throw new Error("No periods returned");
+
+      const periods = items.map((it, i) => ({
+        name: it.period_name || it.name || `Period ${i + 1}`,
+        level: normalizeLevel(it.demand_level || it.level) || "Low",
+        weight: parseInt(it.weight, 10) || 1,
+      }));
+
+      const demandData = buildDemandData(periods);
+      setParsedDemand(demandData);
+      onDemandParsed(demandData);
+    } catch {
+      setDemandWarning("Custom format detected but could not be normalized. Please use the provided template.");
     }
+  };
+
+  const clearDemand = () => {
+    setDemandFile(null);
+    setParsedDemand(null);
+    setDemandWarning("");
+    onDemandParsed(null);
   };
 
   return (
     <section className="mx-auto flex max-w-5xl flex-col gap-8">
+      {/* Hero banner */}
       <div className="glass-panel relative overflow-hidden px-6 py-10 sm:px-10">
         <div className="absolute inset-y-0 right-0 hidden w-1/2 bg-[radial-gradient(circle_at_top_right,rgba(51,212,255,0.22),transparent_55%)] lg:block" />
         <div className="relative flex flex-col items-start gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-2xl space-y-5">
-            <img
-              src={logo}
-              alt="LightMind logo"
-              className="h-20 w-20 rounded-[1.75rem] border border-cyan-300/30 object-cover shadow-glow"
-            />
+            <img src={logo} alt="LightMind logo" className="h-20 w-20 rounded-[1.75rem] border border-cyan-300/30 object-cover shadow-glow" />
             <div className="space-y-3">
-              <p className="text-xs uppercase tracking-[0.45em] text-cyan-200/80">
-                Smart City Control Center
-              </p>
-              <h2 className="text-4xl font-semibold tracking-tight sm:text-5xl">
-                LightMind
-              </h2>
-              <p className="max-w-2xl text-lg text-slate-300">
-                AI traffic signal control for adaptive, smarter cities.
-              </p>
-              <p className="max-w-2xl text-sm text-slate-400">
-                Upload your OpenStreetMap file. Traffic demand data is optional.
-              </p>
+              <p className="text-xs uppercase tracking-[0.45em] text-cyan-200/80">Smart City Control Center</p>
+              <h2 className="text-4xl font-semibold tracking-tight sm:text-5xl">LightMind</h2>
+              <p className="max-w-2xl text-lg text-slate-300">AI traffic signal control for adaptive, smarter cities.</p>
+              <p className="max-w-2xl text-sm text-slate-400">Upload your SUMO network file. Traffic demand data is optional.</p>
             </div>
           </div>
 
           <div className="grid w-full max-w-md gap-3 rounded-3xl border border-white/10 bg-slate-950/40 p-5">
             <div className="flex items-center justify-between rounded-2xl border border-emerald-400/15 bg-emerald-400/5 px-4 py-3">
               <span className="text-sm text-slate-300">Active Session</span>
-              <span className="font-mono text-xs text-emerald-200">
-                {sessionId || "Pending"}
-              </span>
+              <span className="font-mono text-xs text-emerald-200">{sessionId || "Pending"}</span>
             </div>
             <div className="flex items-center gap-2 text-xs text-slate-400">
               <span className="h-2.5 w-2.5 rounded-full bg-trafficGreen shadow-[0_0_18px_rgba(34,197,94,0.9)]" />
@@ -179,65 +199,121 @@ export default function UploadScreen({
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <UploadCard
-          title="Required"
-          description="Import the road network `.osm` file that defines the simulation map and junction layout."
-          filename={uploadedFiles.osm || (isUploadingOsm ? "Uploading..." : "")}
-          disabled={isUploadingOsm}
-          accentClass="border-cyan-300/30 bg-cyan-400/10 text-cyan-100"
-          buttonLabel={isUploadingOsm ? "Uploading OSM..." : "Upload OSM Map"}
-          accept=".osm"
-          inputRef={osmInputRef}
-          onSelect={handleOsmUpload}
-        />
-        <UploadCard
-          title="Optional"
-          description="Attach demand data in `.xlsx` or `.csv` format to emulate scenario-specific traffic pressure."
-          filename={uploadedFiles.demand || (isUploadingDemand ? "Uploading..." : "")}
-          disabled={!sessionId || isUploadingDemand}
-          accentClass="border-amber-300/30 bg-amber-400/10 text-amber-100"
-          buttonLabel={
-            !sessionId
-              ? "Upload OSM First"
-              : isUploadingDemand
-                ? "Uploading Demand..."
-                : "Upload Demand File"
-          }
-          accept=".xlsx,.csv"
-          inputRef={demandInputRef}
-          onSelect={handleDemandUpload}
-        />
+      {/* Network upload */}
+      <div className="glass-panel flex flex-col gap-4 p-6">
+        <div className="space-y-1">
+          <div className="inline-flex rounded-full border border-cyan-300/30 bg-cyan-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-cyan-100">
+            Required
+          </div>
+          <p className="text-sm text-slate-300">
+            Upload your SUMO network file (.net.xml). Prepare it using SUMO's netedit tool with your traffic lights already positioned correctly.
+          </p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-400">
+          {uploadedFiles.net || (isUploadingNet ? "Uploading…" : "No file uploaded yet")}
+        </div>
+        <input ref={netInputRef} type="file" accept=".net.xml,.xml" className="hidden" onChange={handleNetUpload} disabled={isUploadingNet} />
+        <button
+          type="button"
+          disabled={isUploadingNet}
+          onClick={() => netInputRef.current?.click()}
+          className="inline-flex items-center justify-center rounded-2xl border border-cyan-300/30 bg-cyan-400/10 px-4 py-3 text-sm font-medium text-cyan-100 transition hover:border-cyan-200/60 hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-slate-500"
+        >
+          {isUploadingNet ? "Uploading network…" : "Upload SUMO Network File (.net.xml)"}
+        </button>
+
+        {networkStatus && (
+          <div className={`rounded-2xl px-4 py-3 text-sm ${
+            networkStatus.state === "ok" ? "border border-emerald-400/30 bg-emerald-400/8 text-emerald-200" : "border border-amber-400/30 bg-amber-400/8 text-amber-200"
+          }`}>
+            {networkStatus.state === "ok" ? "✓ " : "⚠ "}{networkStatus.message}
+          </div>
+        )}
       </div>
 
-      {sumoStatus && (
-        <div
-          className={`glass-panel px-5 py-4 text-sm ${
-            sumoStatus.state === "ok"
-              ? "border-emerald-400/30 text-emerald-200"
-              : sumoStatus.state === "warn"
-                ? "border-amber-400/30 text-amber-200"
-                : "border-red-400/30 text-red-200"
-          }`}
-        >
-          {sumoStatus.state === "ok" ? "✓ " : sumoStatus.state === "warn" ? "⚠ " : "✗ "}
-          {sumoStatus.message}
+      {/* Demand schedule section */}
+      <div className="glass-panel flex flex-col gap-5 p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <div className="inline-flex rounded-full border border-amber-300/30 bg-amber-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-amber-100">
+              Optional
+            </div>
+            <p className="text-sm text-slate-300">
+              Traffic Demand Schedule — leave empty to cycle Low / Medium / High automatically each episode.
+            </p>
+          </div>
+          {parsedDemand && (
+            <button type="button" onClick={clearDemand} className="shrink-0 text-xs text-slate-500 hover:text-slate-300 transition">
+              ✕ Clear
+            </button>
+          )}
         </div>
-      )}
 
-      {(error || info) && (
-        <div
-          className={`glass-panel px-5 py-4 text-sm ${
-            error ? "border-red-400/30 text-red-200" : "border-emerald-400/20 text-emerald-200"
-          }`}
-        >
-          {error || info}
+        {/* Auto-cycling banner (when no demand loaded) */}
+        {!parsedDemand && (
+          <div className="rounded-2xl border border-slate-700/60 bg-slate-950/40 px-4 py-3 text-sm text-slate-400">
+            <span className="font-medium text-slate-300">Auto mode:</span> Low → Medium → High cycling each episode
+          </div>
+        )}
+
+        {/* Parsed demand preview */}
+        {parsedDemand && (
+          <div className="rounded-2xl border border-emerald-400/25 bg-emerald-400/8 px-4 py-4 space-y-2">
+            <p className="text-sm font-medium text-emerald-100">{parsedDemand.previewText}</p>
+            <p className="text-xs text-slate-400">
+              Training will cycle: {parsedDemand.periodText}
+            </p>
+            <p className="text-xs text-emerald-300/80">
+              Effective demand mix: {parsedDemand.mixText}
+            </p>
+          </div>
+        )}
+
+        {/* Download template + upload dropzone */}
+        <div className="space-y-3">
+          <a
+            href={`${API_BASE}/api/demand-template`}
+            download="lightmind_demand_template.xlsx"
+            className="inline-flex items-center gap-2 rounded-2xl border border-cyan-300/25 bg-cyan-400/8 px-4 py-2.5 text-sm text-cyan-100 transition hover:border-cyan-200/50 hover:bg-cyan-400/15"
+          >
+            ⬇ Download our recommended template
+          </a>
+
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => demandInputRef.current?.click()}
+            onKeyDown={(e) => e.key === "Enter" && demandInputRef.current?.click()}
+            className="cursor-pointer rounded-2xl border border-dashed border-white/15 bg-slate-950/30 px-4 py-5 text-center text-sm text-slate-400 transition hover:border-white/30 hover:bg-slate-950/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+          >
+            {isParsing ? (
+              <span className="text-cyan-300">Parsing schedule…</span>
+            ) : demandFile ? (
+              <span className="text-cyan-100">{demandFile.name} — click to replace</span>
+            ) : (
+              <>
+                <span className="block font-medium text-slate-300">Upload your filled demand schedule (Excel or CSV)</span>
+                <span className="mt-1 block text-xs">Period_Name · Demand_Level · Weight · Description</span>
+              </>
+            )}
+          </div>
+          <input ref={demandInputRef} type="file" accept=".xlsx,.csv" className="hidden" onChange={handleDemandFile} />
+
+          {demandWarning && (
+            <p className="rounded-xl border border-amber-400/25 bg-amber-400/8 px-3 py-2 text-xs text-amber-200">
+              ⚠ {demandWarning}
+            </p>
+          )}
         </div>
+      </div>
+
+      {error && (
+        <div className="glass-panel border-red-400/30 px-5 py-4 text-sm text-red-200">{error}</div>
       )}
 
       <div className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-slate-400">
-          OSM upload is required before continuing to model selection.
+          SUMO network file upload is required before continuing.
         </p>
         <button
           type="button"
@@ -245,7 +321,7 @@ export default function UploadScreen({
           disabled={!sessionId}
           className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-cyan-400 via-sky-400 to-emerald-400 px-6 py-3 text-sm font-semibold text-slate-950 shadow-glow transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Continue to Model Setup
+          Continue to Model Setup →
         </button>
       </div>
     </section>

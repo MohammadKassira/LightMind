@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from uuid import uuid4
 
@@ -20,46 +21,47 @@ router = APIRouter(prefix="/api/upload", tags=["upload"])
 network_router = APIRouter(prefix="/api/sessions", tags=["network"])
 
 
-@router.post("/osm")
-async def upload_osm(file: UploadFile = File(...)) -> dict:
-    extension = Path(file.filename or "").suffix.lower()
-    if extension != ".osm":
-        raise HTTPException(status_code=400, detail="Only .osm files are accepted")
+@router.post("/net")
+async def upload_net(file: UploadFile = File(...)) -> dict:
+    filename = file.filename or "uploaded_map.net.xml"
+    lower = filename.lower()
+    if not (lower.endswith(".net.xml") or lower.endswith(".xml")):
+        raise HTTPException(status_code=400, detail="Only .net.xml or .xml files are accepted")
+
+    content = await file.read()
+
+    # Validate it is a SUMO net file
+    try:
+        root = ET.fromstring(content)
+    except ET.ParseError as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid XML: {exc}") from exc
+    if root.tag != "net":
+        raise HTTPException(status_code=400, detail=f"Root XML tag must be <net>, got <{root.tag}>. Upload a SUMO .net.xml file.")
 
     ensure_data_dirs()
     session_id = uuid4().hex
     upload_dir, _ = ensure_session_dirs(session_id)
-    target_path = upload_dir / "map.osm"
+    target_path = upload_dir / "uploaded_map.net.xml"
+    target_path.write_bytes(content)
 
-    with target_path.open("wb") as handle:
-        handle.write(await file.read())
-
-    create_status(session_id, osm_filename=file.filename or "map.osm")
-    # Persist absolute OSM path so real_train can find it later
-    from services.fake_trainer import load_status
+    create_status(session_id, net_filename=filename)
     _status = load_status(session_id)
-    _status["osm_absolute_path"] = str(target_path.resolve())
+    _status["net_absolute_path"] = str(target_path.resolve())
     save_status(session_id, _status)
 
     network_summary = None
-    sumo_error = None
-
-    import main as app_main  # noqa: PLC0415 — imported here to avoid circular import at module load
-    if app_main.SUMO_AVAILABLE:
-        try:
-            from services.osm_converter import convert_osm_to_sumo, get_network_summary
-            result = convert_osm_to_sumo(str(target_path), session_id)
-            network_summary = get_network_summary(result["network_data"], result["net_file"])
-        except Exception as exc:
-            sumo_error = str(exc)
+    try:
+        from services.osm_converter import extract_network_data, get_network_summary  # noqa: PLC0415
+        network_data = extract_network_data(str(target_path))
+        network_summary = get_network_summary(network_data, str(target_path))
+    except Exception:
+        pass  # Non-fatal — summary only used for UI display
 
     return {
         "session_id": session_id,
-        "osm_absolute_path": str(target_path.resolve()),
-        "message": "OSM uploaded successfully",
-        "osm_uploaded": True,
-        "sumo_converted": network_summary is not None,
-        "sumo_error": sumo_error,
+        "net_absolute_path": str(target_path.resolve()),
+        "message": "SUMO network file uploaded successfully",
+        "net_uploaded": True,
         "network_summary": network_summary,
     }
 

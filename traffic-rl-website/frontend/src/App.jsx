@@ -5,7 +5,7 @@ import ResultsScreen from "./components/ResultsScreen";
 import TrainingScreen from "./components/TrainingScreen";
 import UploadScreen from "./components/UploadScreen";
 
-const API_BASE = "http://localhost:8000";
+import { API_BASE } from "./config";
 
 const STEPS = { upload: 1, model: 2, training: 3, results: 4 };
 const PAGE_TO_STEP = { 1: "upload", 2: "model", 3: "training", 4: "results" };
@@ -17,11 +17,11 @@ function parseHash() {
 }
 
 function clearStorage() {
-  ["lm_step", "lm_session", "lm_osmPath", "lm_osmFile"].forEach((k) => localStorage.removeItem(k));
+  ["lm_step", "lm_session", "lm_netPath", "lm_netFile"].forEach((k) => localStorage.removeItem(k));
   window.location.hash = "";
 }
 
-function saveState(step, sessionId, osmAbsPath, osmFile) {
+function saveState(step, sessionId, netAbsPath, netFile) {
   // Don't pollute the URL when there's no meaningful state to persist
   if (step === "upload" && !sessionId) {
     window.location.hash = "";
@@ -31,17 +31,19 @@ function saveState(step, sessionId, osmAbsPath, osmFile) {
   window.location.hash = sessionId ? `page=${page}&session=${sessionId}` : `page=${page}`;
   localStorage.setItem("lm_step", step);
   localStorage.setItem("lm_session", sessionId || "");
-  localStorage.setItem("lm_osmPath", osmAbsPath || "");
-  localStorage.setItem("lm_osmFile", osmFile || "");
+  localStorage.setItem("lm_netPath", netAbsPath || "");
+  localStorage.setItem("lm_netFile", netFile || "");
 }
 
 export default function App() {
   const [step, setStep] = useState("upload");
   const [sessionId, setSessionId] = useState("");
-  const [osmAbsPath, setOsmAbsPath] = useState("");
-  const [uploadedFiles, setUploadedFiles] = useState({ osm: "", demand: "" });
+  const [netAbsPath, setNetAbsPath] = useState("");
+  const [uploadedFiles, setUploadedFiles] = useState({ net: "", demand: "" });
   const [trainingSessionKey, setTrainingSessionKey] = useState(0);
   const [restored, setRestored] = useState(false);
+  const [demandData, setDemandData] = useState(null); // parsed from UploadScreen
+  const [trainingOptions, setTrainingOptions] = useState({ runBaseline: false, greenDuration: 60, demandSequence: null });
 
   // On mount: restore ONLY when the URL hash explicitly contains page=N (i.e. a same-tab refresh).
   // A clean URL (no hash) or ?fresh=1 always starts fresh and clears any saved state.
@@ -60,8 +62,8 @@ export default function App() {
     const targetSession = hash.session;
     const targetStep = PAGE_TO_STEP[hash.page] || "upload";
 
-    const savedOsmPath = localStorage.getItem("lm_osmPath") || "";
-    const savedOsmFile = localStorage.getItem("lm_osmFile") || "";
+    const savedNetPath = localStorage.getItem("lm_netPath") || "";
+    const savedNetFile = localStorage.getItem("lm_netFile") || "";
 
     if (!targetSession || targetStep === "upload") {
       setRestored(true);
@@ -70,8 +72,8 @@ export default function App() {
 
     const restore = (s) => {
       setSessionId(targetSession);
-      setOsmAbsPath(savedOsmPath);
-      setUploadedFiles({ osm: savedOsmFile, demand: "" });
+      setNetAbsPath(savedNetPath);
+      setUploadedFiles({ net: savedNetFile, demand: "" });
       setStep(s);
     };
 
@@ -102,22 +104,24 @@ export default function App() {
   useEffect(() => {
     if (!restored) return;
     restoredRef.current = true;
-    saveState(step, sessionId, osmAbsPath, uploadedFiles.osm);
-  }, [step, sessionId, osmAbsPath, uploadedFiles.osm, restored]);
+    saveState(step, sessionId, netAbsPath, uploadedFiles.net);
+  }, [step, sessionId, netAbsPath, uploadedFiles.net, restored]);
 
   const resetApp = () => {
     clearStorage();
     setStep("upload");
     setSessionId("");
-    setOsmAbsPath("");
-    setUploadedFiles({ osm: "", demand: "" });
+    setNetAbsPath("");
+    setUploadedFiles({ net: "", demand: "" });
+    setDemandData(null);
     setTrainingSessionKey((k) => k + 1);
   };
 
-  const resetForNewMap = (newSessionId, osmFilename, absPath) => {
+  const resetForNewMap = (newSessionId, netFilename, absPath) => {
     setSessionId(newSessionId);
-    setOsmAbsPath(absPath || "");
-    setUploadedFiles({ osm: osmFilename, demand: "" });
+    setNetAbsPath(absPath || "");
+    setUploadedFiles({ net: netFilename, demand: "" });
+    setDemandData(null);
     setStep("upload");
     setTrainingSessionKey((k) => k + 1);
   };
@@ -167,19 +171,19 @@ export default function App() {
               sessionId={sessionId}
               uploadedFiles={uploadedFiles}
               onSessionCreated={resetForNewMap}
-              onDemandUploaded={(filename) =>
-                setUploadedFiles((cur) => ({ ...cur, demand: filename }))
-              }
+              onDemandParsed={setDemandData}
               onNext={() => setStep("model")}
             />
           )}
+
 
           {step === "model" && (
             <ModelSelect
               key={`model-${sessionId}`}
               sessionId={sessionId}
+              demandData={demandData}
               onBack={() => setStep("upload")}
-              onTrainingStarted={() => setStep("training")}
+              onTrainingStarted={(opts) => { setTrainingOptions(opts || {}); setStep("training"); }}
             />
           )}
 
@@ -187,7 +191,10 @@ export default function App() {
             <TrainingScreen
               key={`training-${sessionId}-${trainingSessionKey}`}
               sessionId={sessionId}
-              osmAbsPath={osmAbsPath}
+              netAbsPath={netAbsPath}
+              runBaseline={trainingOptions.runBaseline || false}
+              greenDuration={trainingOptions.greenDuration || 60}
+              demandSequence={trainingOptions.demandSequence || null}
               onComplete={() => setStep("results")}
               onReset={resetApp}
             />
