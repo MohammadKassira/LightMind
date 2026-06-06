@@ -1,0 +1,58 @@
+{
+  "network": "grid6_smoke",
+  "artifact_type": "project_generated_debug_network",
+  "purpose": "Small six-controller multi-agent debug network for baseline, graph, and controller-pipeline validation.",
+  "generator": "SUMO netgenerate",
+  "generator_intent": {
+    "topology": "3 x 2 regular grid with boundary attachment roads",
+    "target_tls_controller_count": 6,
+    "target_tls_ids": [
+      "A0",
+      "A1",
+      "B0",
+      "B1",
+      "C0",
+      "C1"
+    ],
+    "traffic_light_policy": "Only the six internal grid junctions are signal-controlled; boundary attachment nodes remain non-signalized.",
+    "lane_design": "one lane per direction",
+    "internal_spacing_m": 200,
+    "boundary_attach_length_m": 200,
+    "benchmark_demand_status": "not generated here; frozen low/medium/high demand scenarios will be created later"
+  },
+  "netgenerate_command": [
+    "netgenerate",
+    "--grid",
+    "--grid.x-number=3",
+    "--grid.y-number=2",
+    "--grid.x-length=200",
+    "--grid.y-length=200",
+    "--grid.attach-length=200",
+    "--bidi-probability=1",
+    "--default.lanenumber=1",
+    "--default.speed=13.89",
+    "--default-junction-type=priority",
+    "--tls.set=A0,A1,B0,B1,C0,C1",
+    "--write-metadata=true",
+    "--output-file=data/networks/generated/grid6_smoke/grid6_smoke.net.xml"
+  ],
+  "generated_files": [
+    "data/networks/generated/grid6_smoke/grid6_smoke.net.xml",
+    "data/networks/generated/grid6_smoke/grid6_smoke.sumocfg",
+    "data/networks/generated/grid6_smoke/grid6_smoke.empty.rou.xml"
+  ],
+  "source_config_route_policy": "The source .sumocfg references an explicit empty route file so the generated network artifact is structurally complete and boot-runnable before final frozen benchmark demand scenarios are created.",
+  "validation_status": "network_artifact_accepted",
+  "accepted_artifact_status": {
+    "structural_review": "PASS",
+    "boot_validation": "PASS",
+    "benchmark_demand_status": "not yet generated; frozen low/medium/high scenario bank comes later"
+  },
+  "validation_evidence": {
+    "structural_review_log": "benchmark/logs/grid6_smoke_generation_review.txt",
+    "boot_stdout_log": "benchmark/logs/source_boot_validation_runs/grid6_smoke/stdout.txt",
+    "boot_stderr_log": "benchmark/logs/source_boot_validation_runs/grid6_smoke/stderr.txt",
+    "boot_sumo_full_log": "benchmark/logs/source_boot_validation_runs/grid6_smoke/sumo_full.log",
+    "boot_sumo_error_log": "benchmark/logs/source_boot_validation_runs/grid6_smoke/sumo_error.log"
+  }
+}

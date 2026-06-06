@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 3x3 grid of signalized intersections.
+     Layout:  A0 - A1 - A2
+              |    |    |
+              B0 - B1 - B2
+              |    |    |
+              C0 - C1 - C2
+     All roads are bidirectional (two directed edges per pair).
+     Each intersection has 4 straight-through connections (NS and EW).
+     Expected: 9 nodes, 24 flow edges, 24 coord edges = 48 total. -->
+<net version="1.9">
+
+    <!-- ===== JUNCTIONS ===== -->
+
+    <!-- Signalized intersections (3x3 grid) -->
+    <junction id="A0" type="traffic_light" x="100" y="400"/>
+    <junction id="A1" type="traffic_light" x="300" y="400"/>
+    <junction id="A2" type="traffic_light" x="500" y="400"/>
+    <junction id="B0" type="traffic_light" x="100" y="200"/>
+    <junction id="B1" type="traffic_light" x="300" y="200"/>
+    <junction id="B2" type="traffic_light" x="500" y="200"/>
+    <junction id="C0" type="traffic_light" x="100" y="0"/>
+    <junction id="C1" type="traffic_light" x="300" y="0"/>
+    <junction id="C2" type="traffic_light" x="500" y="0"/>
+
+    <!-- Perimeter arm junctions (non-signalized dead-ends) -->
+    <junction id="nA0" type="dead_end" x="100" y="500"/>
+    <junction id="nA1" type="dead_end" x="300" y="500"/>
+    <junction id="nA2" type="dead_end" x="500" y="500"/>
+    <junction id="sC0" type="dead_end" x="100" y="-100"/>
+    <junction id="sC1" type="dead_end" x="300" y="-100"/>
+    <junction id="sC2" type="dead_end" x="500" y="-100"/>
+    <junction id="wA0" type="dead_end" x="0"   y="400"/>
+    <junction id="wB0" type="dead_end" x="0"   y="200"/>
+    <junction id="wC0" type="dead_end" x="0"   y="0"/>
+    <junction id="eA2" type="dead_end" x="600" y="400"/>
+    <junction id="eB2" type="dead_end" x="600" y="200"/>
+    <junction id="eC2" type="dead_end" x="600" y="0"/>
+
+    <!-- ===== EDGES ===== -->
+
+    <!-- Horizontal inter-signal edges (bidirectional) -->
+    <edge id="A0_A1" from="A0" to="A1" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="A1_A0" from="A1" to="A0" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="A1_A2" from="A1" to="A2" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="A2_A1" from="A2" to="A1" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="B0_B1" from="B0" to="B1" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="B1_B0" from="B1" to="B0" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="B1_B2" from="B1" to="B2" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="B2_B1" from="B2" to="B1" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="C0_C1" from="C0" to="C1" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="C1_C0" from="C1" to="C0" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="C1_C2" from="C1" to="C2" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="C2_C1" from="C2" to="C1" priority="1" numLanes="1" speed="13.89"/>
+
+    <!-- Vertical inter-signal edges (bidirectional) -->
+    <edge id="A0_B0" from="A0" to="B0" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="B0_A0" from="B0" to="A0" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="B0_C0" from="B0" to="C0" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="C0_B0" from="C0" to="B0" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="A1_B1" from="A1" to="B1" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="B1_A1" from="B1" to="A1" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="B1_C1" from="B1" to="C1" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="C1_B1" from="C1" to="B1" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="A2_B2" from="A2" to="B2" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="B2_A2" from="B2" to="A2" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="B2_C2" from="B2" to="C2" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="C2_B2" from="C2" to="B2" priority="1" numLanes="1" speed="13.89"/>
+
+    <!-- Arm inbound edges (perimeter → grid) -->
+    <edge id="nA0_A0" from="nA0" to="A0" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="nA1_A1" from="nA1" to="A1" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="nA2_A2" from="nA2" to="A2" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="sC0_C0" from="sC0" to="C0" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="sC1_C1" from="sC1" to="C1" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="sC2_C2" from="sC2" to="C2" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="wA0_A0" from="wA0" to="A0" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="wB0_B0" from="wB0" to="B0" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="wC0_C0" from="wC0" to="C0" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="eA2_A2" from="eA2" to="A2" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="eB2_B2" from="eB2" to="B2" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="eC2_C2" from="eC2" to="C2" priority="1" numLanes="1" speed="13.89"/>
+
+    <!-- Arm outbound edges (grid → perimeter) -->
+    <edge id="A0_nA0" from="A0" to="nA0" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="A1_nA1" from="A1" to="nA1" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="A2_nA2" from="A2" to="nA2" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="C0_sC0" from="C0" to="sC0" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="C1_sC1" from="C1" to="sC1" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="C2_sC2" from="C2" to="sC2" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="A0_wA0" from="A0" to="wA0" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="B0_wB0" from="B0" to="wB0" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="C0_wC0" from="C0" to="wC0" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="A2_eA2" from="A2" to="eA2" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="B2_eB2" from="B2" to="eB2" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="C2_eC2" from="C2" to="eC2" priority="1" numLanes="1" speed="13.89"/>
+
+    <!-- ===== CONNECTIONS (4 straight-through per intersection) =====
+         linkIndex 0: N incoming -> S outgoing
+         linkIndex 1: S incoming -> N outgoing
+         linkIndex 2: W incoming -> E outgoing
+         linkIndex 3: E incoming -> W outgoing -->
+
+    <!-- A0: N=nA0, S=B0, W=wA0, E=A1 -->
+    <connection from="nA0_A0" to="A0_B0"  fromLane="0" toLane="0" tl="A0" linkIndex="0"/>
+    <connection from="B0_A0"  to="A0_nA0" fromLane="0" toLane="0" tl="A0" linkIndex="1"/>
+    <connection from="wA0_A0" to="A0_A1"  fromLane="0" toLane="0" tl="A0" linkIndex="2"/>
+    <connection from="A1_A0"  to="A0_wA0" fromLane="0" toLane="0" tl="A0" linkIndex="3"/>
+
+    <!-- A1: N=nA1, S=B1, W=A0, E=A2 -->
+    <connection from="nA1_A1" to="A1_B1"  fromLane="0" toLane="0" tl="A1" linkIndex="0"/>
+    <connection from="B1_A1"  to="A1_nA1" fromLane="0" toLane="0" tl="A1" linkIndex="1"/>
+    <connection from="A0_A1"  to="A1_A2"  fromLane="0" toLane="0" tl="A1" linkIndex="2"/>
+    <connection from="A2_A1"  to="A1_A0"  fromLane="0" toLane="0" tl="A1" linkIndex="3"/>
+
+    <!-- A2: N=nA2, S=B2, W=A1, E=eA2 -->
+    <connection from="nA2_A2" to="A2_B2"  fromLane="0" toLane="0" tl="A2" linkIndex="0"/>
+    <connection from="B2_A2"  to="A2_nA2" fromLane="0" toLane="0" tl="A2" linkIndex="1"/>
+    <connection from="A1_A2"  to="A2_eA2" fromLane="0" toLane="0" tl="A2" linkIndex="2"/>
+    <connection from="eA2_A2" to="A2_A1"  fromLane="0" toLane="0" tl="A2" linkIndex="3"/>
+
+    <!-- B0: N=A0, S=C0, W=wB0, E=B1 -->
+    <connection from="A0_B0"  to="B0_C0"  fromLane="0" toLane="0" tl="B0" linkIndex="0"/>
+    <connection from="C0_B0"  to="B0_A0"  fromLane="0" toLane="0" tl="B0" linkIndex="1"/>
+    <connection from="wB0_B0" to="B0_B1"  fromLane="0" toLane="0" tl="B0" linkIndex="2"/>
+    <connection from="B1_B0"  to="B0_wB0" fromLane="0" toLane="0" tl="B0" linkIndex="3"/>
+
+    <!-- B1: N=A1, S=C1, W=B0, E=B2  (interior node) -->
+    <connection from="A1_B1"  to="B1_C1"  fromLane="0" toLane="0" tl="B1" linkIndex="0"/>
+    <connection from="C1_B1"  to="B1_A1"  fromLane="0" toLane="0" tl="B1" linkIndex="1"/>
+    <connection from="B0_B1"  to="B1_B2"  fromLane="0" toLane="0" tl="B1" linkIndex="2"/>
+    <connection from="B2_B1"  to="B1_B0"  fromLane="0" toLane="0" tl="B1" linkIndex="3"/>
+
+    <!-- B2: N=A2, S=C2, W=B1, E=eB2 -->
+    <connection from="A2_B2"  to="B2_C2"  fromLane="0" toLane="0" tl="B2" linkIndex="0"/>
+    <connection from="C2_B2"  to="B2_A2"  fromLane="0" toLane="0" tl="B2" linkIndex="1"/>
+    <connection from="B1_B2"  to="B2_eB2" fromLane="0" toLane="0" tl="B2" linkIndex="2"/>
+    <connection from="eB2_B2" to="B2_B1"  fromLane="0" toLane="0" tl="B2" linkIndex="3"/>
+
+    <!-- C0: N=B0, S=sC0, W=wC0, E=C1 -->
+    <connection from="B0_C0"  to="C0_sC0" fromLane="0" toLane="0" tl="C0" linkIndex="0"/>
+    <connection from="sC0_C0" to="C0_B0"  fromLane="0" toLane="0" tl="C0" linkIndex="1"/>
+    <connection from="wC0_C0" to="C0_C1"  fromLane="0" toLane="0" tl="C0" linkIndex="2"/>
+    <connection from="C1_C0"  to="C0_wC0" fromLane="0" toLane="0" tl="C0" linkIndex="3"/>
+
+    <!-- C1: N=B1, S=sC1, W=C0, E=C2 -->
+    <connection from="B1_C1"  to="C1_sC1" fromLane="0" toLane="0" tl="C1" linkIndex="0"/>
+    <connection from="sC1_C1" to="C1_B1"  fromLane="0" toLane="0" tl="C1" linkIndex="1"/>
+    <connection from="C0_C1"  to="C1_C2"  fromLane="0" toLane="0" tl="C1" linkIndex="2"/>
+    <connection from="C2_C1"  to="C1_C0"  fromLane="0" toLane="0" tl="C1" linkIndex="3"/>
+
+    <!-- C2: N=B2, S=sC2, W=C1, E=eC2 -->
+    <connection from="B2_C2"  to="C2_sC2" fromLane="0" toLane="0" tl="C2" linkIndex="0"/>
+    <connection from="sC2_C2" to="C2_B2"  fromLane="0" toLane="0" tl="C2" linkIndex="1"/>
+    <connection from="C1_C2"  to="C2_eC2" fromLane="0" toLane="0" tl="C2" linkIndex="2"/>
+    <connection from="eC2_C2" to="C2_C1"  fromLane="0" toLane="0" tl="C2" linkIndex="3"/>
+
+    <!-- ===== TRAFFIC LIGHTS (identical 2-phase logic for all 9 nodes) =====
+         State strings are 4 chars (linkIndex 0-3).
+         Phase 0 "GGrr": linkIndex 0 (N->S) and 1 (S->N) green  -> NS green
+         Phase 1 "yyrr": NS yellow
+         Phase 2 "rrGG": linkIndex 2 (W->E) and 3 (E->W) green  -> EW green
+         Phase 3 "rryy": EW yellow -->
+    <tlLogic id="A0" type="static" programID="0" offset="0">
+        <phase duration="42" state="GGrr"/>
+        <phase duration="3"  state="yyrr"/>
+        <phase duration="42" state="rrGG"/>
+        <phase duration="3"  state="rryy"/>
+    </tlLogic>
+    <tlLogic id="A1" type="static" programID="0" offset="0">
+        <phase duration="42" state="GGrr"/>
+        <phase duration="3"  state="yyrr"/>
+        <phase duration="42" state="rrGG"/>
+        <phase duration="3"  state="rryy"/>
+    </tlLogic>
+    <tlLogic id="A2" type="static" programID="0" offset="0">
+        <phase duration="42" state="GGrr"/>
+        <phase duration="3"  state="yyrr"/>
+        <phase duration="42" state="rrGG"/>
+        <phase duration="3"  state="rryy"/>
+    </tlLogic>
+    <tlLogic id="B0" type="static" programID="0" offset="0">
+        <phase duration="42" state="GGrr"/>
+        <phase duration="3"  state="yyrr"/>
+        <phase duration="42" state="rrGG"/>
+        <phase duration="3"  state="rryy"/>
+    </tlLogic>
+    <tlLogic id="B1" type="static" programID="0" offset="0">
+        <phase duration="42" state="GGrr"/>
+        <phase duration="3"  state="yyrr"/>
+        <phase duration="42" state="rrGG"/>
+        <phase duration="3"  state="rryy"/>
+    </tlLogic>
+    <tlLogic id="B2" type="static" programID="0" offset="0">
+        <phase duration="42" state="GGrr"/>
+        <phase duration="3"  state="yyrr"/>
+        <phase duration="42" state="rrGG"/>
+        <phase duration="3"  state="rryy"/>
+    </tlLogic>
+    <tlLogic id="C0" type="static" programID="0" offset="0">
+        <phase duration="42" state="GGrr"/>
+        <phase duration="3"  state="yyrr"/>
+        <phase duration="42" state="rrGG"/>
+        <phase duration="3"  state="rryy"/>
+    </tlLogic>
+    <tlLogic id="C1" type="static" programID="0" offset="0">
+        <phase duration="42" state="GGrr"/>
+        <phase duration="3"  state="yyrr"/>
+        <phase duration="42" state="rrGG"/>
+        <phase duration="3"  state="rryy"/>
+    </tlLogic>
+    <tlLogic id="C2" type="static" programID="0" offset="0">
+        <phase duration="42" state="GGrr"/>
+        <phase duration="3"  state="yyrr"/>
+        <phase duration="42" state="rrGG"/>
+        <phase duration="3"  state="rryy"/>
+    </tlLogic>
+
+</net>

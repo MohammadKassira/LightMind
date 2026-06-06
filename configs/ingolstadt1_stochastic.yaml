@@ -1,0 +1,53 @@
+network:
+  net:   networks/external/RESCO/ingolstadt1/ingolstadt1.net.xml
+  rou:   networks/external/RESCO/ingolstadt1/ingolstadt1_dense_stochastic.rou.xml
+  route_files:
+    - networks/external/RESCO/ingolstadt1/ingolstadt1_light_stochastic.rou.xml
+    - networks/external/RESCO/ingolstadt1/ingolstadt1_medium_stochastic.rou.xml
+    - networks/external/RESCO/ingolstadt1/ingolstadt1_dense_stochastic.rou.xml
+    - networks/external/RESCO/ingolstadt1/ingolstadt1_heavy_stochastic.rou.xml
+  begin_time: 57600
+  name: ingolstadt1
+
+model:
+  hidden_dim: 128
+  embed_dim: 64
+  head_hidden_dim: 64
+  max_obs_dim: 80
+  max_phase_feat_dim: 32
+  gat:
+    num_heads: 4
+    out_per_head: 32
+    num_layers: 2
+    l2_out_per_head: 16
+    typed_edges: true
+    zero_hop: false
+    neighbor_masking: true
+
+trainer:
+  lr: 0.0001
+  replay_buffer_size: 50000
+  batch_size: 64
+  warmup_steps: 5000
+  gamma: 0.95
+  grad_clip: 10.0
+  epsilon_start: 0.584
+  epsilon_end: 0.05
+  epsilon_decay_steps: 45000
+  target_update_steps: 5000
+  num_episodes: 300
+  num_workers: 1
+  checkpoint_every: 100
+  checkpoint_dir: "checkpoints/ingolstadt1"
+
+reward:
+  use_pressure: true
+  queue_weight: 0.5
+  pressure_weight: 0.5
+  scale: 20
+
+perception:
+  severity: 0.0
+  sentinel_value: -1.0
+
+seed: 42

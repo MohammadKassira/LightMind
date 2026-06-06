@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Stochastic flow route file: ingolstadt1 heavy (scale=1.25, ~595 veh/ep) -->
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+    <flow id="f0" from="653473569#5" to="124812857#0" begin="57600" end="58600" probability="0.106250" departLane="free" departSpeed="max"/>
+    <flow id="f1" from="104010354" to="124812857#0" begin="57600" end="58600" probability="0.144444" departLane="free" departSpeed="max"/>
+    <flow id="f2" from="201963537#1" to="-653473569#5" begin="57600" end="58600" probability="0.087500" departLane="free" departSpeed="max"/>
+    <flow id="f3" from="201963537#1" to="104012170" begin="57600" end="58600" probability="0.127083" departLane="free" departSpeed="max"/>
+    <flow id="f4" from="104010354" to="-653473569#5" begin="57600" end="58600" probability="0.016319" departLane="free" departSpeed="max"/>
+    <flow id="f5" from="653473569#5" to="104012170" begin="57600" end="58600" probability="0.039931" departLane="free" departSpeed="max"/>
+    <flow id="f6" from="25149219#1" to="-653473569#5" begin="57600" end="58600" probability="0.059028" departLane="free" departSpeed="max"/>
+    <flow id="f7" from="25149219#1" to="104012170" begin="57600" end="58600" probability="0.014583" departLane="free" departSpeed="max"/>
+    <flow id="f8" from="201963537#1" to="104010475#0" begin="57600" end="58600" probability="0.000347" departLane="free" departSpeed="max"/>
+    <flow id="f9" from="201963537#1" to="201963537#1" begin="57600" end="58600" probability="0.000347" departLane="free" departSpeed="max"/>
+</routes>

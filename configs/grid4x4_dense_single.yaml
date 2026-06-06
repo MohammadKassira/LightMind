@@ -1,0 +1,45 @@
+# grid4x4 dense-traffic — single-worker DQNTrainer (1 env, 1:1 grad steps)
+# Run: python train.py --config configs/grid4x4_dense_single.yaml \
+#        --net networks/external/RESCO/grid4x4/grid4x4.net.xml \
+#        --rou networks/external/RESCO/grid4x4/grid4x4_dense.rou.xml \
+#        --log-file training_dense_single.log
+
+model:
+  hidden_dim: 128
+  embed_dim: 64
+  head_hidden_dim: 64
+  gat:
+    num_heads: 4
+    out_per_head: 32
+    num_layers: 2
+    l2_out_per_head: 16
+    typed_edges: true
+    zero_hop: false
+    neighbor_masking: true
+
+trainer:
+  lr: 0.0001
+  replay_buffer_size: 50000
+  batch_size: 64
+  warmup_steps: 5000
+  gamma: 0.95
+  grad_clip: 10.0
+  epsilon_start: 1.0
+  epsilon_end: 0.05
+  epsilon_decay_steps: 80000   # grad steps; decays over ~400 eps after warmup
+  target_update_steps: 5000    # hard copy every 25 episodes; no target_tau (Polyak collapses over 200k steps)
+  num_episodes: 1000
+  checkpoint_every: 100
+  checkpoint_dir: "checkpoints/grid4x4_dense_single"
+
+reward:
+  use_pressure: true
+  queue_weight: 0.5
+  pressure_weight: 0.5
+  scale: 20
+
+perception:
+  severity: 0.0
+  sentinel_value: -1.0
+
+seed: 42

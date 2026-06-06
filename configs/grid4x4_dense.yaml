@@ -1,0 +1,52 @@
+# grid4x4 dense-traffic training — 1000 veh/1000s (4x grid4x4_1.rou.xml density)
+# Dense route ensures meaningful congestion so signal policy actually matters.
+# Run: python train.py --config configs/grid4x4_dense.yaml 2>&1 | tee training_dense.log
+
+network:
+  net:        networks/external/RESCO/grid4x4/grid4x4.net.xml
+  rou:        networks/external/RESCO/grid4x4/grid4x4_dense.rou.xml
+  begin_time: 0
+  name:       grid4x4
+
+model:
+  hidden_dim: 128
+  embed_dim: 64
+  head_hidden_dim: 64
+  max_obs_dim: 80
+  max_phase_feat_dim: 32
+  gat:
+    num_heads: 4
+    out_per_head: 32
+    num_layers: 2
+    l2_out_per_head: 16
+    typed_edges: true
+    zero_hop: false
+    neighbor_masking: true
+
+trainer:
+  lr: 0.0001
+  replay_buffer_size: 50000
+  batch_size: 64
+  warmup_steps: 5000
+  gamma: 0.95
+  grad_clip: 10.0
+  epsilon_start: 1.0
+  epsilon_end: 0.05
+  epsilon_decay_steps: 1500
+  target_tau: 0.001
+  num_episodes: 1000
+  num_workers: 2
+  checkpoint_every: 100
+  checkpoint_dir: "checkpoints/grid4x4_dense"
+
+reward:
+  use_pressure: true
+  queue_weight: 0.5      # -q_in/n         : penalises waiting vehicles directly (ungameable)
+  pressure_weight: 0.5   # -|q_in-q_out|/n : downstream awareness (don't push into congestion)
+  scale: 20
+
+perception:
+  severity: 0.0
+  sentinel_value: -1.0
+
+seed: 42

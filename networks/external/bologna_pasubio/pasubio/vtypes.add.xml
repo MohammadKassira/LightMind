@@ -1,0 +1,4 @@
+<additional>
+    <vType id="private"   vClass="passenger" maxSpeed="13.89" length="5.0" accel="2.6" decel="4.5" sigma="0.5"/>
+    <vType id="ignoring"  vClass="ignoring"  maxSpeed="13.89" length="5.0" accel="2.6" decel="4.5" sigma="0.5"/>
+</additional>

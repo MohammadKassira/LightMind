@@ -1,0 +1,45 @@
+{
+  "network_name": "toronto",
+  "artifact_scope": "network_only",
+  "canonical_artifact_dir": "data/networks/generated/toronto",
+  "canonical_net_file": "data/networks/generated/toronto/toronto_scarborough_agincourt_arterial.net.xml",
+  "canonical_sumocfg": "data/networks/generated/toronto/toronto.sumocfg",
+  "validation": {
+    "structural_review": {
+      "status": "pass",
+      "report": "benchmark/logs/toronto_generated_artifact_structural_review.txt",
+      "tls_controller_ids": "benchmark/logs/toronto_generated_artifact_tls_controller_ids.txt",
+      "counts": {
+        "normal_edge_count": 493,
+        "junction_count_all": 478,
+        "signalized_junction_count": 88,
+        "tllogic_controller_count": 88,
+        "controlled_tls_count_from_connection_refs": 88,
+        "controlled_junction_count_from_tls_connections": 88
+      },
+      "mismatch_counts": {
+        "signalized_minus_tllogic": 0,
+        "tllogic_minus_signalized": 0,
+        "signalized_minus_controlled_tls": 0,
+        "controlled_tls_minus_signalized": 0,
+        "signalized_minus_controlled_junctions": 0,
+        "controlled_junctions_minus_signalized": 0
+      }
+    },
+    "boot_validation": {
+      "status": "pass",
+      "sumo_exit_code": 0,
+      "run_duration_seconds": 1,
+      "logs_dir": "benchmark/logs/source_boot_validation_runs/toronto",
+      "stdout": "benchmark/logs/source_boot_validation_runs/toronto/stdout.txt",
+      "stderr": "benchmark/logs/source_boot_validation_runs/toronto/stderr.txt",
+      "sumo_log": "benchmark/logs/source_boot_validation_runs/toronto/sumo.log",
+      "sumo_error_log": "benchmark/logs/source_boot_validation_runs/toronto/sumo.error.log"
+    }
+  },
+  "acceptance": {
+    "artifact_accepted": true,
+    "accepted_as": "toronto_network_artifact",
+    "notes": "Accepted as a canonical network snapshot for downstream benchmark demand generation under project protocol. Upstream Toronto traffic integration was intentionally not pursued for this acceptance stage."
+  }
+}

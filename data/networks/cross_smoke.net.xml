@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Single 4-way signalized intersection (A0).
+     8 road edges, 12 connections (no U-turns), 4 phases (2 actionable).
+     Expected graph: 1 node, 0 flow edges. -->
+<net version="1.9">
+
+    <!-- Arm junctions (non-signalized dead-ends) -->
+    <junction id="top0"    type="dead_end" x="200" y="400"/>
+    <junction id="bottom0" type="dead_end" x="200" y="0"/>
+    <junction id="left0"   type="dead_end" x="0"   y="200"/>
+    <junction id="right0"  type="dead_end" x="400" y="200"/>
+
+    <!-- Signalized center junction -->
+    <junction id="A0" type="traffic_light" x="200" y="200"/>
+
+    <!-- Inbound road edges -->
+    <edge id="top0A0"    from="top0"    to="A0"      priority="1" numLanes="1" speed="13.89"/>
+    <edge id="bottom0A0" from="bottom0" to="A0"      priority="1" numLanes="1" speed="13.89"/>
+    <edge id="left0A0"   from="left0"   to="A0"      priority="1" numLanes="1" speed="13.89"/>
+    <edge id="right0A0"  from="right0"  to="A0"      priority="1" numLanes="1" speed="13.89"/>
+
+    <!-- Outbound road edges -->
+    <edge id="A0top0"    from="A0" to="top0"    priority="1" numLanes="1" speed="13.89"/>
+    <edge id="A0bottom0" from="A0" to="bottom0" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="A0left0"   from="A0" to="left0"   priority="1" numLanes="1" speed="13.89"/>
+    <edge id="A0right0"  from="A0" to="right0"  priority="1" numLanes="1" speed="13.89"/>
+
+    <!-- Connections through A0 (12 movements, no U-turns)
+         linkIndex assignment:
+           0  top0A0    -> A0bottom0  (S straight)
+           1  top0A0    -> A0right0   (S left-turn)
+           2  top0A0    -> A0left0    (S right-turn)
+           3  bottom0A0 -> A0top0     (N straight)
+           4  bottom0A0 -> A0left0    (N left-turn)
+           5  bottom0A0 -> A0right0   (N right-turn)
+           6  left0A0   -> A0right0   (E straight)
+           7  left0A0   -> A0top0     (E left-turn)
+           8  left0A0   -> A0bottom0  (E right-turn)
+           9  right0A0  -> A0left0    (W straight)
+          10  right0A0  -> A0bottom0  (W left-turn)
+          11  right0A0  -> A0top0     (W right-turn) -->
+    <connection from="top0A0"    to="A0bottom0" fromLane="0" toLane="0" tl="A0" linkIndex="0"  dir="s"/>
+    <connection from="top0A0"    to="A0right0"  fromLane="0" toLane="0" tl="A0" linkIndex="1"  dir="l"/>
+    <connection from="top0A0"    to="A0left0"   fromLane="0" toLane="0" tl="A0" linkIndex="2"  dir="r"/>
+    <connection from="bottom0A0" to="A0top0"    fromLane="0" toLane="0" tl="A0" linkIndex="3"  dir="s"/>
+    <connection from="bottom0A0" to="A0left0"   fromLane="0" toLane="0" tl="A0" linkIndex="4"  dir="l"/>
+    <connection from="bottom0A0" to="A0right0"  fromLane="0" toLane="0" tl="A0" linkIndex="5"  dir="r"/>
+    <connection from="left0A0"   to="A0right0"  fromLane="0" toLane="0" tl="A0" linkIndex="6"  dir="s"/>
+    <connection from="left0A0"   to="A0top0"    fromLane="0" toLane="0" tl="A0" linkIndex="7"  dir="l"/>
+    <connection from="left0A0"   to="A0bottom0" fromLane="0" toLane="0" tl="A0" linkIndex="8"  dir="r"/>
+    <connection from="right0A0"  to="A0left0"   fromLane="0" toLane="0" tl="A0" linkIndex="9"  dir="s"/>
+    <connection from="right0A0"  to="A0bottom0" fromLane="0" toLane="0" tl="A0" linkIndex="10" dir="l"/>
+    <connection from="right0A0"  to="A0top0"    fromLane="0" toLane="0" tl="A0" linkIndex="11" dir="r"/>
+
+    <!-- Traffic light for A0
+         State strings are 12 chars (one per linkIndex 0-11).
+         Phase 0: NS green  -> "GgGGgGrrrrrr"  (actionable)
+         Phase 1: NS yellow -> "yyyyyyrrrrrr"  (not actionable)
+         Phase 2: EW green  -> "rrrrrrGgGGgG"  (actionable)
+         Phase 3: EW yellow -> "rrrrrryyyyyy"  (not actionable) -->
+    <tlLogic id="A0" type="static" programID="0" offset="0">
+        <phase duration="42" state="GgGGgGrrrrrr"/>
+        <phase duration="3"  state="yyyyyyrrrrrr"/>
+        <phase duration="42" state="rrrrrrGgGGgG"/>
+        <phase duration="3"  state="rrrrrryyyyyy"/>
+    </tlLogic>
+
+</net>

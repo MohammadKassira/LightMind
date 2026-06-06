@@ -1,0 +1,53 @@
+# Fine-tune template: load an R8 multi-network checkpoint and adapt to a new network.
+# Usage:
+#   python train.py --config configs/finetune_template.yaml \
+#                   --checkpoint checkpoints/r8_multi/final.pt
+#
+# The R8 checkpoint is the "factory model" — every new deployment starts from it.
+# This config sets a lower lr and epsilon_start to avoid destroying pretrained weights.
+#
+# IMPORTANT: max_obs_dim and max_phase_feat_dim must match the checkpoint's saved values.
+# load_checkpoint() asserts this and raises ValueError if they disagree.
+
+# Single-network target — replace net/rou with the deployment network:
+# net:  networks/external/RESCO/ingolstadt7/ingolstadt7.net.xml
+# rou:  networks/external/RESCO/ingolstadt7/ingolstadt7.rou.xml
+
+model:
+  hidden_dim: 128
+  embed_dim: 64
+  head_hidden_dim: 64
+  max_obs_dim: 80         # must match checkpoint's saved max_obs_dim — load_checkpoint asserts this
+  max_phase_feat_dim: 32  # must match checkpoint's saved max_phase_feat_dim — load_checkpoint asserts this
+  gat:
+    num_heads: 4
+    out_per_head: 32
+    num_layers: 2
+    l2_out_per_head: 16
+    typed_edges: true
+    zero_hop: false
+    neighbor_masking: true
+
+trainer:
+  lr: 0.00005          # 6x lower than R8 training to preserve pretrained representations
+  replay_buffer_size: 20000
+  batch_size: 64
+  warmup_steps: 200
+  gamma: 0.99
+  grad_clip: 5.0
+  epsilon_start: 0.3   # start near-greedy — pretrained policy is already reasonable
+  epsilon_end: 0.05
+  epsilon_decay_steps: 5000
+  target_update_steps: 500
+  num_episodes: 50
+  checkpoint_every: 25
+  checkpoint_dir: "checkpoints/finetune"
+
+reward:
+  use_pressure: true
+
+perception:
+  severity: 0.1
+  sentinel_value: -1.0
+
+seed: 42

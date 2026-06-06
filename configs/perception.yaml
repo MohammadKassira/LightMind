@@ -1,0 +1,7 @@
+# Perception configuration
+# Structured sensor model severity knob and related settings.
+
+perception:
+  severity: 0.0
+  use_missing_data_flags: true
+  sentinel_value: -1.0

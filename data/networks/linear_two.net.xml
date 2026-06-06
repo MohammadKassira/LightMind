@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Two directly-connected signalized intersections (A0 -> B0).
+     A0 and B0 are linked by bidirectional road edges.
+     Expected graph: 2 nodes, 2 flow edges (A0->B0 and B0->A0),
+                     2 coord edges (B0->A0 and A0->B0). -->
+<net version="1.9">
+
+    <!-- Source/sink and arm junctions (non-signalized) -->
+    <junction id="src"   type="dead_end" x="0"   y="100"/>
+    <junction id="Atop"  type="dead_end" x="100" y="200"/>
+    <junction id="Btop"  type="dead_end" x="300" y="200"/>
+    <junction id="snk"   type="dead_end" x="400" y="100"/>
+
+    <!-- Signalized intersections -->
+    <junction id="A0" type="traffic_light" x="100" y="100"/>
+    <junction id="B0" type="traffic_light" x="300" y="100"/>
+
+    <!-- Edges feeding into A0 -->
+    <edge id="src_A0"  from="src"  to="A0" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="Atop_A0" from="Atop" to="A0" priority="1" numLanes="1" speed="13.89"/>
+
+    <!-- Inter-signal edges (bidirectional) — these produce the flow edges -->
+    <edge id="A0_B0" from="A0" to="B0" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="B0_A0" from="B0" to="A0" priority="1" numLanes="1" speed="13.89"/>
+
+    <!-- Edges leaving B0 -->
+    <edge id="Btop_B0" from="Btop" to="B0" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="B0_snk"  from="B0"  to="snk" priority="1" numLanes="1" speed="13.89"/>
+
+    <!-- Outbound arms -->
+    <edge id="A0_Atop" from="A0" to="Atop" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="B0_Btop" from="B0" to="Btop" priority="1" numLanes="1" speed="13.89"/>
+
+    <!-- Connections through A0
+         linkIndex 0: src_A0  -> A0_B0   (straight east)
+         linkIndex 1: Atop_A0 -> A0_B0   (right turn)
+         Phase 0 "Gr": src_A0 green,  Atop_A0 red
+         Phase 2 "rG": src_A0 red,    Atop_A0 green -->
+    <connection from="src_A0"  to="A0_B0" fromLane="0" toLane="0" tl="A0" linkIndex="0" dir="s"/>
+    <connection from="Atop_A0" to="A0_B0" fromLane="0" toLane="0" tl="A0" linkIndex="1" dir="r"/>
+
+    <!-- Connections through B0
+         linkIndex 0: A0_B0   -> B0_snk  (straight east)
+         linkIndex 1: Btop_B0 -> B0_snk  (right turn) -->
+    <connection from="A0_B0"   to="B0_snk" fromLane="0" toLane="0" tl="B0" linkIndex="0" dir="s"/>
+    <connection from="Btop_B0" to="B0_snk" fromLane="0" toLane="0" tl="B0" linkIndex="1" dir="r"/>
+
+    <!-- Also need connections coming from B0_A0 into A0 for the reverse flow -->
+    <connection from="B0_A0" to="A0_Atop" fromLane="0" toLane="0" tl="A0" linkIndex="2" dir="l"/>
+
+    <!-- Also need connections from snk into B0 for completeness -->
+
+    <!-- TL for A0: 2-char phases for linkIndex 0-1, 3-char for 0-2 -->
+    <!-- We have 3 connections at A0 (linkIndex 0,1,2), so state is 3 chars -->
+    <tlLogic id="A0" type="static" programID="0" offset="0">
+        <phase duration="30" state="Grr"/>
+        <phase duration="3"  state="yrr"/>
+        <phase duration="30" state="rGr"/>
+        <phase duration="3"  state="ryr"/>
+    </tlLogic>
+
+    <!-- TL for B0: 2 connections (linkIndex 0,1), state is 2 chars -->
+    <tlLogic id="B0" type="static" programID="0" offset="0">
+        <phase duration="30" state="Gr"/>
+        <phase duration="3"  state="yr"/>
+        <phase duration="30" state="rG"/>
+        <phase duration="3"  state="ry"/>
+    </tlLogic>
+
+</net>

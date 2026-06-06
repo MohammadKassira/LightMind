@@ -1,0 +1,37 @@
+model:
+  hidden_dim: 128
+  embed_dim: 64          # NodeEncoder output; GAT layer-1 input
+  head_hidden_dim: 64
+  gat:
+    num_heads: 4
+    out_per_head: 32       # Layer 1: 4*32 = 128
+    num_layers: 2
+    l2_out_per_head: 16    # Layer 2: 4*16 = 64 → PhaseHead input
+    typed_edges: true      # keep R6 typed edges
+    zero_hop: false
+    neighbor_masking: true # R7: suppress attention from failed neighbors
+
+trainer:
+  lr: 0.0003
+  replay_buffer_size: 50000
+  batch_size: 64
+  warmup_steps: 1000
+  gamma: 0.99
+  grad_clip: 10.0
+  epsilon_start: 1.0
+  epsilon_end: 0.05
+  epsilon_decay_steps: 20000
+  target_update_steps: 1000
+  num_episodes: 300
+  checkpoint_every: 100
+  checkpoint_dir: "checkpoints/r7_masked"
+
+reward:
+  use_pressure: true
+
+perception:
+  severity: 0.1        # R7: 10% per-sensor failure rate; tests use synthetic forced
+                       # failures for full code-path coverage
+  sentinel_value: -1.0
+
+seed: 1

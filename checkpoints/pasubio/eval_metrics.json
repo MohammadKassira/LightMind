@@ -1,0 +1,13 @@
+{
+  "n_episodes": 5,
+  "mean_return": -72.02192114218035,
+  "std_return": 6.084907921888224,
+  "mean_ep_length": 200.0,
+  "mean_waiting_time": 181.45806275670435,
+  "p95_waiting_time": 449.1047904191617,
+  "max_waiting_time": 529.3089887640449,
+  "mean_throughput_per_step": 0.812,
+  "mean_vehicles_in_net": 487.679,
+  "p95_vehicles_in_net": 709,
+  "mean_phase_change_rate": 3.482
+}

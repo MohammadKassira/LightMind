@@ -1,0 +1,18 @@
+{
+  "network_name": "toronto",
+  "artifact_type": "external_framework_generated_snapshot",
+  "source_framework": "TorontoSUMONetworks",
+  "source_repo_commit": "7975f1aa01eeac62ba395e9ae66f59e5b0b1a5a9",
+  "source_generated_net_xml": "data/networks/external/toronto/data/sumo_networks/scarborough-agincourt/scarborough-agincourt_arterial.net.xml",
+  "canonical_copied_net_xml": "data/networks/generated/toronto/toronto_scarborough_agincourt_arterial.net.xml",
+  "upstream_pipeline_status": {
+    "network_build": "succeeded",
+    "traffic_integration": "intentionally_not_pursued_after_network_artifact_obtained",
+    "notes": "Toronto upstream traffic-integration and route-generation path was not required for this benchmark stage; benchmark demand scenarios will be generated later under project-controlled protocol."
+  },
+  "patch_references": [
+    "benchmark/logs/toronto_local_patch.diff",
+    "benchmark/logs/toronto_local_patch_summary.json"
+  ],
+  "benchmark_demand_status": "not_generated_yet"
+}

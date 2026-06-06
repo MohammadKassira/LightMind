@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-05-15T00:46:15.625088+02:00 by Eclipse SUMO sumo 1.26.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="/home/mohammad-kassira/traffic_rl/data/networks/external/bologna_pasubio/pasubio/pasubio_buslanes.net.xml"/>
+        <route-files value="/home/mohammad-kassira/traffic_rl/data/networks/external/bologna_pasubio/pasubio/pasubio.rou.xml"/>
+        <additional-files value="/home/mohammad-kassira/traffic_rl/data/networks/external/bologna_pasubio/pasubio/pasubio_vtypes.add.xml,/home/mohammad-kassira/traffic_rl/data/networks/external/bologna_pasubio/pasubio/pasubio_bus_stops.add.xml,/home/mohammad-kassira/traffic_rl/data/networks/external/bologna_pasubio/pasubio/pasubio_busses.rou.xml,/home/mohammad-kassira/traffic_rl/data/networks/external/bologna_pasubio/pasubio/pasubio_detectors.add.xml,/home/mohammad-kassira/traffic_rl/data/networks/external/bologna_pasubio/pasubio/pasubio_tls.add.xml"/>
+    </input>
+
+    <output>
+        <tripinfo-output value="/home/mohammad-kassira/traffic_rl/data/networks/external/bologna_pasubio/pasubio/tripinfos.xml"/>
+    </output>
+
+    <time>
+        <begin value="0.0"/>
+        <end value="1.0"/>
+    </time>
+
+    <report>
+        <log value="/home/mohammad-kassira/traffic_rl/benchmark/logs/source_boot_validation_runs/bologna_pasubio/sumo_full.log"/>
+        <error-log value="/home/mohammad-kassira/traffic_rl/benchmark/logs/source_boot_validation_runs/bologna_pasubio/sumo_error.log"/>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+</tripinfos>

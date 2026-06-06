@@ -1,0 +1,38 @@
+{
+  "network": "grid6_smoke",
+  "artifact_type": "project_generated_debug_network",
+  "validation_scope": "network artifact only; frozen benchmark demand not generated yet",
+  "decision": "ACCEPTED",
+  "structural_review": {
+    "status": "PASS",
+    "normal_edge_count": 34,
+    "traffic_light_junction_count_from_junction_type": 6,
+    "tls_controller_count": 6,
+    "controlled_connection_tls_count": 6,
+    "controlled_junctions_referenced_by_tls_connections": 6,
+    "accepted_tls_ids": [
+      "A0",
+      "A1",
+      "B0",
+      "B1",
+      "C0",
+      "C1"
+    ],
+    "evidence_log": "benchmark/logs/grid6_smoke_generation_review.txt"
+  },
+  "boot_validation": {
+    "status": "PASS",
+    "sumo_return_code": 0,
+    "begin_s": 0,
+    "end_s": 1,
+    "stdout_log": "benchmark/logs/source_boot_validation_runs/grid6_smoke/stdout.txt",
+    "stderr_log": "benchmark/logs/source_boot_validation_runs/grid6_smoke/stderr.txt",
+    "sumo_full_log": "benchmark/logs/source_boot_validation_runs/grid6_smoke/sumo_full.log",
+    "sumo_error_log": "benchmark/logs/source_boot_validation_runs/grid6_smoke/sumo_error.log",
+    "notes": "No stdout or stderr errors/warnings were observed in the one-second source boot validation."
+  },
+  "current_limitations": [
+    "No final low/medium/high randomized frozen demand scenarios exist yet.",
+    "This acceptance covers the reusable generated network artifact only."
+  ]
+}

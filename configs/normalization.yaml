@@ -1,0 +1,13 @@
+# Normalization config for observations and features.
+# §3.1 single source of truth — every module imports from here, never redefines locally.
+#numbers are random now just to get the sumo traci linked
+# §3.1 normalization constants
+q_max: 30           # lane capacity (vehicles); queue / q_max -> [0, 1]
+v_max: 13.9         # free-flow speed (m/s); lookahead L = v_max * t_duration
+t_duration: 10.0    # phase window (s) for running-vehicle lookahead
+max_phase_time: 90.0  # normalizes time-in-current-phase -> ~[0, 1]
+
+graph:
+  edge_types:
+    flow: 0
+    coordination: 1

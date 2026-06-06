@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Stochastic flow route file: cologne1 medium (scale=0.75, ~419 veh/ep) -->
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+    <flow id="f0" from="28198821#3" to="32038051#0" begin="25200" end="26200" probability="0.031875" departLane="free" departSpeed="max"/>
+    <flow id="f1" from="130165204" to="32038051#0" begin="25200" end="26200" probability="0.010625" departLane="free" departSpeed="max"/>
+    <flow id="f2" from="-32038056#3" to="-28198821#4" begin="25200" end="26200" probability="0.043333" departLane="free" departSpeed="max"/>
+    <flow id="f3" from="-32038056#3" to="32324544#0" begin="25200" end="26200" probability="0.015417" departLane="free" departSpeed="max"/>
+    <flow id="f4" from="-32038056#3" to="32038051#0" begin="25200" end="26200" probability="0.057917" departLane="free" departSpeed="max"/>
+    <flow id="f5" from="27115123#2" to="32038051#0" begin="25200" end="26200" probability="0.010208" departLane="free" departSpeed="max"/>
+    <flow id="f6" from="23429231#1" to="32038051#0" begin="25200" end="26200" probability="0.074167" departLane="free" departSpeed="max"/>
+    <flow id="f7" from="23429231#1" to="-28198821#4" begin="25200" end="26200" probability="0.014583" departLane="free" departSpeed="max"/>
+    <flow id="f8" from="23429231#1" to="32324544#0" begin="25200" end="26200" probability="0.013750" departLane="free" departSpeed="max"/>
+    <flow id="f9" from="27115123#2" to="32324544#0" begin="25200" end="26200" probability="0.021875" departLane="free" departSpeed="max"/>
+    <flow id="f10" from="-32038056#3" to="32038056#0" begin="25200" end="26200" probability="0.002292" departLane="free" departSpeed="max"/>
+    <flow id="f11" from="130165204" to="32324544#0" begin="25200" end="26200" probability="0.005208" departLane="free" departSpeed="max"/>
+    <flow id="f12" from="23429231#1" to="32038056#0" begin="25200" end="26200" probability="0.040833" departLane="free" departSpeed="max"/>
+    <flow id="f13" from="130165204" to="32038056#0" begin="25200" end="26200" probability="0.005417" departLane="free" departSpeed="max"/>
+    <flow id="f14" from="28198821#3" to="32324544#0" begin="25200" end="26200" probability="0.013333" departLane="free" departSpeed="max"/>
+    <flow id="f15" from="27115123#2" to="32038056#0" begin="25200" end="26200" probability="0.008125" departLane="free" departSpeed="max"/>
+    <flow id="f16" from="28198821#3" to="32038056#0" begin="25200" end="26200" probability="0.045625" departLane="free" departSpeed="max"/>
+    <flow id="f17" from="130165204" to="-28198821#4" begin="25200" end="26200" probability="0.001458" departLane="free" departSpeed="max"/>
+    <flow id="f18" from="130165204" to="130165204" begin="25200" end="26200" probability="0.000625" departLane="free" departSpeed="max"/>
+    <flow id="f19" from="-32038056#3" to="28198821#3" begin="25200" end="26200" probability="0.000208" departLane="free" departSpeed="max"/>
+    <flow id="f20" from="27115123#2" to="-28198821#4" begin="25200" end="26200" probability="0.002292" departLane="free" departSpeed="max"/>
+    <flow id="f21" from="32324544#0" to="32324544#0" begin="25200" end="26200" probability="0.000208" departLane="free" departSpeed="max"/>
+    <flow id="f22" from="28198821#3" to="-28198821#4" begin="25200" end="26200" probability="0.000417" departLane="free" departSpeed="max"/>
+</routes>

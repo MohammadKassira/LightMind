@@ -1,0 +1,78 @@
+# R8: multi-network shared-parameter training
+# done-when: one param set trains across all 4 listed networks without crashing
+# TRAINING SET: cologne8 (real/EU), bologna_pasubio (real/EU different city),
+#               toronto (real/NA North American grid), grid4x4 (synthetic)
+# HELD-OUT eval nets (must NOT appear here): Ing1, Ing7, Ing21, Art4x4
+
+networks:
+  - net:        networks/external/RESCO/cologne8/cologne8.net.xml
+    rou:        networks/external/RESCO/cologne8/cologne8.rou.xml
+    begin_time: 25200
+    name:       cologne8
+  - net:        networks/external/bologna_pasubio/pasubio/pasubio_buslanes.net.xml
+    rou:        networks/external/bologna_pasubio/pasubio/pasubio.rou.xml
+    additional: networks/external/bologna_pasubio/pasubio/vtypes.add.xml
+    begin_time: 0
+    name:       bologna_pasubio
+  - net:        networks/generated/toronto/toronto_scarborough_agincourt_arterial.net.xml
+    rou:        networks/generated/toronto/toronto_generated.rou.xml
+    begin_time: 0
+    name:       toronto
+    # toronto N=88 nodes — reduced capacity to avoid ~4.5 GB buffer at global 50k
+    replay_buffer_size: 8000
+    # toronto_generated.rou.xml must be created before training:
+    # python -c "from env.demand_generator import generate_demand; generate_demand(
+    #   'networks/generated/toronto/toronto_scarborough_agincourt_arterial.net.xml',
+    #   'networks/generated/toronto/toronto_generated.rou.xml', period=2.0, duration=3600, seed=42)"
+  - net:        networks/external/RESCO/grid4x4/grid4x4.net.xml
+    rou:        networks/external/RESCO/grid4x4/grid4x4_1.rou.xml
+    begin_time: 0
+    name:       grid4x4
+
+model:
+  hidden_dim: 128
+  embed_dim: 64
+  head_hidden_dim: 64
+  # Deployment ceilings — model is built with these dims, not the probed max.
+  # Any network whose obs_dim or phase_feat_dim exceeds these values will crash
+  # at init with a clear error. Raise them if you add a larger network.
+  max_obs_dim: 80
+  max_phase_feat_dim: 32
+  gat:
+    num_heads: 4
+    out_per_head: 32
+    num_layers: 2
+    l2_out_per_head: 16
+    typed_edges: true
+    zero_hop: false
+    neighbor_masking: true
+
+trainer:
+  lr: 0.0003
+  replay_buffer_size: 50000
+  batch_size: 64
+  # warmup_steps applies PER BUFFER (not globally). With 4 networks, the effective
+  # start of gradient steps is ~warmup_steps * num_networks total env steps.
+  warmup_steps: 1000
+  gamma: 0.99
+  grad_clip: 10.0
+  epsilon_start: 1.0
+  epsilon_end: 0.05
+  # epsilon_decay_steps counts TOTAL steps across ALL networks (one global counter).
+  epsilon_decay_steps: 30000
+  target_update_steps: 1000
+  num_episodes: 500
+  # num_workers > 1 enables parallel episode collection (one worker per network).
+  # SUMO is an external subprocess — GIL released during env.step() for true parallelism.
+  num_workers: 4
+  checkpoint_every: 100
+  checkpoint_dir: "checkpoints/r8_multi"
+
+reward:
+  use_pressure: true
+
+perception:
+  severity: 0.05
+  sentinel_value: -1.0
+
+seed: 1

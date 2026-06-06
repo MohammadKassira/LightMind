@@ -1,0 +1,18 @@
+# TrafficEnv configuration (real SUMO environment).
+# All paths are relative to the project root.
+
+env:
+  net_file: "networks/generated/cross_smoke/cross_smoke.net.xml"
+  route_file: null         # null = caller must provide or generate via demand_generator
+  max_steps: 200           # action steps per episode
+  delta_time: 5            # simulation seconds per step
+  yellow_time: 2           # yellow phase duration (seconds)
+  min_green: 5             # minimum green time before phase change allowed (seconds)
+  use_gui: false
+  begin_time: 0            # simulation start time (seconds); set to 25200 for cologne1 7-AM demand
+
+# Demand generation (for networks without pre-existing route files)
+demand:
+  period: 2.0              # seconds between vehicle insertions (~30 veh/min at period=2)
+  duration: 3600           # simulation horizon for randomTrips.py
+  seed: 42

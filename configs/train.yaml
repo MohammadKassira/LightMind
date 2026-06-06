@@ -1,0 +1,36 @@
+# Training default configuration
+# Override this with Hydra command-line or other config groups.
+
+trainer:
+  batch_size: 64
+  replay_buffer_size: 50000
+  target_update_steps: 1000
+  epsilon_start: 1.0
+  epsilon_end: 0.05
+  epsilon_decay_steps: 10000
+  warmup_steps: 1000
+  gamma: 0.99
+  grad_clip: 10.0
+  num_episodes: 500
+  checkpoint_every: 100
+  checkpoint_dir: "checkpoints/r2_0hop"
+
+model:
+  hidden_dim: 128
+  embed_dim: 64
+  head_hidden_dim: 64
+
+env:
+  network_name: "cross_smoke"
+  max_steps: 200
+  missing_prob: 0.0
+
+reward:
+  use_pressure: false   # false in R2; trainer uses env.step() reward_dict directly.
+                        # Flip to true in R3 when traffic_env arrives — no trainer code changes.
+
+perception:
+  severity: 0.0         # 0.0 = clean (R2 behaviour); set to e.g. 0.1 to enable R3 degradation
+  sentinel_value: -1.0  # must match configs/perception.yaml — authoritative source is perception.yaml
+
+seed: 1

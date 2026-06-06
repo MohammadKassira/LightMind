@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Stochastic flow route file: arterial4x4 medium (scale=0.75, ~621 veh/ep) -->
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+    <flow id="f0" from="np13_nt13" to="nt4_np5" begin="0" end="1000" probability="0.062750" departLane="free" departSpeed="max"/>
+    <flow id="f1" from="np16_nt1" to="nt16_np8" begin="0" end="1000" probability="0.062750" departLane="free" departSpeed="max"/>
+    <flow id="f2" from="np2_nt2" to="nt15_np10" begin="0" end="1000" probability="0.103750" departLane="free" departSpeed="max"/>
+    <flow id="f3" from="np3_nt3" to="nt14_np11" begin="0" end="1000" probability="0.103750" departLane="free" departSpeed="max"/>
+    <flow id="f4" from="np5_nt4" to="nt13_np13" begin="0" end="1000" probability="0.054250" departLane="free" departSpeed="max"/>
+    <flow id="f5" from="np8_nt16" to="nt1_np16" begin="0" end="1000" probability="0.054250" departLane="free" departSpeed="max"/>
+    <flow id="f6" from="np10_nt15" to="nt2_np2" begin="0" end="1000" probability="0.089750" departLane="free" departSpeed="max"/>
+    <flow id="f7" from="np11_nt14" to="nt3_np3" begin="0" end="1000" probability="0.089750" departLane="free" departSpeed="max"/>
+</routes>

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Two signalized intersections (A0, B0) separated by a non-signalized
+     pass-through junction (M0). Tests that BFS correctly finds A0->B0
+     as a flow edge even though they are not directly connected.
+     Expected graph: 2 nodes, 1 flow edge (A0->B0), 1 coord edge (B0->A0). -->
+<net version="1.9">
+
+    <!-- Non-signalized junctions -->
+    <junction id="src" type="dead_end"  x="0"   y="100"/>
+    <junction id="M0"  type="priority"  x="200" y="100"/>
+    <junction id="snk" type="dead_end"  x="400" y="100"/>
+
+    <!-- Signalized junctions -->
+    <junction id="A0" type="traffic_light" x="100" y="100"/>
+    <junction id="B0" type="traffic_light" x="300" y="100"/>
+
+    <!-- Road edges (all one-way left to right) -->
+    <edge id="src_A0" from="src" to="A0" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="A0_M0"  from="A0"  to="M0" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="M0_B0"  from="M0"  to="B0" priority="1" numLanes="1" speed="13.89"/>
+    <edge id="B0_snk" from="B0"  to="snk" priority="1" numLanes="1" speed="13.89"/>
+
+    <!-- Connection through A0: src_A0 -> A0_M0 (straight) -->
+    <connection from="src_A0" to="A0_M0" fromLane="0" toLane="0" tl="A0" linkIndex="0" dir="s"/>
+
+    <!-- Connection through B0: M0_B0 -> B0_snk (straight) -->
+    <connection from="M0_B0" to="B0_snk" fromLane="0" toLane="0" tl="B0" linkIndex="0" dir="s"/>
+
+    <!-- TL for A0: 1 connection, 1-char state -->
+    <tlLogic id="A0" type="static" programID="0" offset="0">
+        <phase duration="30" state="G"/>
+        <phase duration="3"  state="y"/>
+        <phase duration="30" state="r"/>
+    </tlLogic>
+
+    <!-- TL for B0: 1 connection, 1-char state -->
+    <tlLogic id="B0" type="static" programID="0" offset="0">
+        <phase duration="30" state="G"/>
+        <phase duration="3"  state="y"/>
+        <phase duration="30" state="r"/>
+    </tlLogic>
+
+</net>

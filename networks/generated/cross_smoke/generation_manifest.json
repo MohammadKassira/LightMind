@@ -1,0 +1,47 @@
+{
+  "network": "cross_smoke",
+  "artifact_type": "project_generated_debug_network",
+  "purpose": "Minimal single-controller end-to-end smoke network for baseline and controller-pipeline validation.",
+  "generator": "SUMO netgenerate",
+  "generator_intent": {
+    "topology": "single four-way crossing with attached boundary arms",
+    "target_tls_controller_count": 1,
+    "traffic_light_policy": "Only central junction A0 is signal-controlled; boundary attachment nodes remain non-signalized.",
+    "lane_design": "one lane per direction",
+    "benchmark_demand_status": "not generated here; frozen low/medium/high demand scenarios will be created later"
+  },
+  "netgenerate_command": [
+    "netgenerate",
+    "--grid",
+    "--grid.x-number=1",
+    "--grid.y-number=1",
+    "--grid.attach-length=200",
+    "--bidi-probability=1",
+    "--default.lanenumber=1",
+    "--default.speed=13.89",
+    "--default-junction-type=priority",
+    "--tls.set=A0",
+    "--write-metadata=true",
+    "--output-file=data/networks/generated/cross_smoke/cross_smoke.net.xml"
+  ],
+  "generated_files": [
+    "data/networks/generated/cross_smoke/cross_smoke.net.xml",
+    "data/networks/generated/cross_smoke/cross_smoke.sumocfg",
+    "data/networks/generated/cross_smoke/cross_smoke.empty.rou.xml"
+  ],
+  "validation_status": "network_artifact_accepted",
+  "revision_note": "Initial generation used --default-junction-type=traffic_light and accidentally created five TLS controllers. The corrected generation explicitly sets only A0 as TLS-controlled.",
+  "source_config_route_policy": "The source .sumocfg references an explicit empty route file so the generated network artifact is structurally complete and boot-runnable before final frozen benchmark demand scenarios are created.",
+  "accepted_artifact_status": {
+    "structural_review": "PASS",
+    "boot_validation": "PASS",
+    "benchmark_demand_status": "not yet generated; frozen low/medium/high scenario bank comes later"
+  },
+  "validation_evidence": {
+    "structural_review_log": "benchmark/logs/cross_smoke_generation_review.txt",
+    "boot_stdout_log": "benchmark/logs/source_boot_validation_runs/cross_smoke/stdout.txt",
+    "boot_stderr_log": "benchmark/logs/source_boot_validation_runs/cross_smoke/stderr.txt",
+    "boot_sumo_full_log": "benchmark/logs/source_boot_validation_runs/cross_smoke/sumo_full.log",
+    "boot_sumo_error_log": "benchmark/logs/source_boot_validation_runs/cross_smoke/sumo_error.log"
+  }
+}
