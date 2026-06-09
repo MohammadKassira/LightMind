@@ -143,7 +143,6 @@ All networks live under `model/networks/external/`:
 | Network | Intersections | Source |
 |---|---|---|
 | `cologne1` | 1 TLS | RESCO / DLR |
-| `cologne3` | Small | RESCO / DLR |
 | `cologne8` | Medium | RESCO / DLR |
 | `ingolstadt1` | 1 TLS | RESCO / DLR |
 | `ingolstadt7` | Small | RESCO / DLR |
@@ -151,8 +150,6 @@ All networks live under `model/networks/external/`:
 | `grid4x4` | 4×4 synthetic grid | RESCO |
 | `arterial4x4` | 4×4 arterial | RESCO |
 | `bologna_pasubio` | Real (Bologna, Italy) | SUMO Scenarios |
-| `MoST` | Large (Monaco) | Monaco Street Scenario |
-| `toronto` | Real (Toronto, Canada) | Toronto Open Data / sumo-rl |
 
 Stochastic demand variants (light (25%)/ medium (45%)/ dense (65%)/ heavy(90%)) are pre-generated per network.
 
