@@ -40,7 +40,6 @@ const STAGE_ORDER = [
   "random_route_generation",
   "scenario_manifest_creation",
   "independent_dqn_training",
-  "evaluation",
   "complete",
 ];
 
@@ -49,7 +48,6 @@ const STAGE_LABELS = {
   random_route_generation:     "Generating traffic demand",
   scenario_manifest_creation:  "Building training config",
   independent_dqn_training:    "Training GAT model",
-  evaluation:                  "Running fixed-time baseline",
 };
 
 function logColor(msg) {
@@ -310,10 +308,10 @@ function RealTrainingView({ sessionId, netAbsPath, passThresholdPct = 25, onComp
   const current_episode = liveKpis?.episode ?? progress.current_episode ?? 0;
   const total_episodes = progress.total_episodes ?? 1000;
 
-  // Pre-training stages cap at 5%; training fills 5→95% by episode ratio; evaluation/complete = 100%
+  // Pre-training stages cap at 5%; training fills 5→95% by episode ratio; complete = 100%
   const combinedProgress = (() => {
     const stage = status?.stage;
-    if (stage === "complete" || stage === "evaluation") return 100;
+    if (stage === "complete") return 100;
     if (stage === "independent_dqn_training") {
       if (current_episode <= 0 || total_episodes <= 0) return 5;
       return Math.min(Math.round(5 + (current_episode / total_episodes) * 90), 95);
@@ -364,7 +362,7 @@ function RealTrainingView({ sessionId, netAbsPath, passThresholdPct = 25, onComp
         <div className="flex flex-wrap items-center gap-3">
           <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-4 py-2 text-sm font-medium text-emerald-100">
             <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-trafficGreen shadow-[0_0_16px_rgba(34,197,94,0.9)]" />
-            {status.stage === "evaluation" ? "Running baseline…" : "Running"}
+            Running
           </div>
           <div className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-100">
             {combinedProgress}% pipeline
@@ -419,15 +417,9 @@ function RealTrainingView({ sessionId, netAbsPath, passThresholdPct = 25, onComp
         totalEpisodes={total_episodes}
       />}
 
-      {status.stage === "evaluation" ? (
-        <div className="rounded-3xl border border-amber-400/30 bg-amber-400/10 px-6 py-4 text-sm text-amber-200">
-          Running fixed-time baseline evaluation (5 episodes with built-in TL program)…
-        </div>
-      ) : (
-        <div className="rounded-3xl border border-amber-400/30 bg-amber-400/10 px-6 py-4 text-sm text-amber-200">
-          GAT model training is running on your network. SUMO is simulating traffic headlessly. Do not close this tab. Training takes 30–240 minutes depending on map size.
-        </div>
-      )}
+      <div className="rounded-3xl border border-amber-400/30 bg-amber-400/10 px-6 py-4 text-sm text-amber-200">
+        GAT model training is running on your network. SUMO is simulating traffic headlessly. Do not close this tab.
+      </div>
 
       {failed && (
         <div className="rounded-3xl border border-red-400/30 bg-red-400/10 px-6 py-4 text-sm text-red-200">
@@ -551,7 +543,7 @@ function RealTrainingView({ sessionId, netAbsPath, passThresholdPct = 25, onComp
                 ? status.stage === "complete" && status.status === "passed"
                 : completedSet.has(s) || status.stage === "complete";
               const isCurrent = status.stage === s;
-              const label = s === "complete" ? "Evaluating" : (STAGE_LABELS[s] ?? s.replace(/_/g, " "));
+              const label = s === "complete" ? "Complete" : (STAGE_LABELS[s] ?? s.replace(/_/g, " "));
               return (
                 <div
                   key={s}

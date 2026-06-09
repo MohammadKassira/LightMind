@@ -4,14 +4,16 @@ import {
   Chart as ChartJS,
   Filler,
   Legend,
+  LineController,
   LineElement,
   LinearScale,
   PointElement,
+  ScatterController,
   Tooltip,
 } from "chart.js";
-import { Line } from "react-chartjs-2";
+import { Chart } from "react-chartjs-2";
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, LineController, ScatterController, Filler, Tooltip, Legend);
 
 import { API_BASE } from "../config";
 
@@ -39,42 +41,108 @@ function rollingMean(arr, window = 20) {
 }
 
 function VerdictBadge({ verdict, onDeploy, onRetrain }) {
+  const [showRisk, setShowRisk] = useState(false);
+  const [acknowledged, setAcknowledged] = useState(false);
+
   if (!verdict || verdict.passed === null || verdict.passed === undefined) return null;
   const pass = verdict.passed;
   return (
-    <div className={`flex flex-col gap-4 rounded-2xl border p-5 sm:flex-row sm:items-center sm:justify-between ${
+    <div className={`flex flex-col gap-4 rounded-2xl border p-5 ${
       pass
         ? "border-emerald-400/30 bg-emerald-400/10"
         : "border-red-400/30 bg-red-400/10"
     }`}>
-      <div className={`flex items-center gap-3 ${pass ? "text-emerald-200" : "text-red-200"}`}>
-        <span className="text-2xl font-bold leading-none">{pass ? "✓" : "✗"}</span>
-        <div>
-          <p className="font-semibold text-sm">{pass ? "PASS" : "FAIL"}</p>
-          <p className="text-xs opacity-75">
-            {verdict.wait_improvement_pct > 0 ? "+" : ""}
-            {verdict.wait_improvement_pct}% wait vs fixed-time
-            {" · "}threshold {verdict.threshold_pct}%
-          </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className={`flex items-center gap-3 ${pass ? "text-emerald-200" : "text-red-200"}`}>
+          <span className="text-2xl font-bold leading-none">{pass ? "✓" : "✗"}</span>
+          <div>
+            <p className="font-semibold text-sm">{pass ? "PASS" : "FAIL"}</p>
+            <p className="text-xs opacity-75">
+              {verdict.wait_improvement_pct > 0 ? "+" : ""}
+              {verdict.wait_improvement_pct}% wait vs fixed-time
+              {" · "}threshold {verdict.threshold_pct}%
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {pass && onDeploy && (
+            <button
+              type="button"
+              onClick={onDeploy}
+              className="rounded-2xl bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 px-5 py-2.5 text-sm font-semibold text-slate-950 shadow-glow transition hover:scale-[1.01]"
+            >
+              Deploy Model →
+            </button>
+          )}
+          {!pass && onRetrain && (
+            <button
+              type="button"
+              onClick={onRetrain}
+              className="rounded-2xl border border-amber-400/40 bg-amber-400/10 px-5 py-2.5 text-sm font-semibold text-amber-200 transition hover:border-amber-300/60"
+            >
+              Retrain Model →
+            </button>
+          )}
+          {!pass && onDeploy && !showRisk && (
+            <button
+              type="button"
+              onClick={() => setShowRisk(true)}
+              className="rounded-2xl border border-red-400/30 bg-red-400/10 px-5 py-2.5 text-sm font-semibold text-red-300 transition hover:border-red-400/60 hover:bg-red-400/20"
+            >
+              Deploy anyway →
+            </button>
+          )}
         </div>
       </div>
-      {pass && onDeploy && (
-        <button
-          type="button"
-          onClick={onDeploy}
-          className="rounded-2xl bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 px-5 py-2.5 text-sm font-semibold text-slate-950 shadow-glow transition hover:scale-[1.01]"
-        >
-          Deploy Model →
-        </button>
-      )}
-      {!pass && onRetrain && (
-        <button
-          type="button"
-          onClick={onRetrain}
-          className="rounded-2xl border border-amber-400/40 bg-amber-400/10 px-5 py-2.5 text-sm font-semibold text-amber-200 transition hover:border-amber-300/60"
-        >
-          Retrain Model →
-        </button>
+
+      {!pass && showRisk && (
+        <div className="flex flex-col gap-4 rounded-2xl border border-red-400/25 bg-black/30 p-5">
+          <p className="text-xs font-semibold uppercase tracking-widest text-red-300">
+            Deploy failed model — risks
+          </p>
+          <ul className="space-y-2 text-sm text-slate-300 border border-red-400/20 rounded-2xl bg-black/30 px-5 py-4">
+            <li className="flex items-start gap-2">
+              <span className="mt-0.5 shrink-0 text-red-400">✗</span>
+              The model did not reach the performance threshold — it may perform worse than the fixed-time controller on your network.
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mt-0.5 shrink-0 text-red-400">✗</span>
+              Deploying on a live intersection may worsen traffic conditions compared to the existing fixed-time program.
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mt-0.5 shrink-0 text-amber-400">→</span>
+              You can retrain the model to improve performance before deploying.
+            </li>
+          </ul>
+          <label className="flex cursor-pointer select-none items-center gap-3">
+            <input
+              type="checkbox"
+              checked={acknowledged}
+              onChange={(e) => setAcknowledged(e.target.checked)}
+              className="h-4 w-4 cursor-pointer rounded border-red-400/50 bg-slate-900 accent-red-500"
+            />
+            <span className="text-sm text-slate-300">
+              I understand the model is underperforming and deployment may degrade traffic flow.
+            </span>
+          </label>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onDeploy}
+              disabled={!acknowledged}
+              className="rounded-xl bg-red-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Deploy at my own risk
+            </button>
+            <button
+              type="button"
+              onClick={() => { setShowRisk(false); setAcknowledged(false); }}
+              className="rounded-xl border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-medium text-slate-200 transition hover:border-white/30 hover:bg-white/10"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -303,15 +371,6 @@ export default function ResultsScreen({ sessionId, onReset, onDeploy, onRetrain 
           {realResult?.available && (
             <button
               type="button"
-              onClick={handleDownloadBundle}
-              className="rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-4 py-3 text-sm font-medium text-cyan-100 transition hover:border-cyan-200/50"
-            >
-              ⬇ Download Full Bundle
-            </button>
-          )}
-          {realResult?.available && (
-            <button
-              type="button"
               onClick={handleDownloadModel}
               className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 px-4 py-3 text-sm font-medium text-emerald-100 transition hover:border-emerald-200/50"
             >
@@ -535,7 +594,7 @@ export default function ResultsScreen({ sessionId, onReset, onDeploy, onRetrain 
             </div>
             <div className="h-[22rem]">
               {rewardChartData ? (
-                <Line data={rewardChartData} options={rewardChartOptions} />
+                <Chart type="line" data={rewardChartData} options={rewardChartOptions} />
               ) : (
                 <div className="flex h-full items-center justify-center text-sm text-slate-500">
                   No training reward data available

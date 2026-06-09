@@ -131,6 +131,11 @@ class DQNTrainer:
         perception_severity = _cfg(cfg, "perception.severity", 0.0)
         sentinel           = _cfg(cfg, "perception.sentinel_value", -1.0)
         seed               = _cfg(cfg, "seed", 1)
+        stop_file          = _cfg(cfg, "trainer.stop_file", "")
+        conv_window        = int(_cfg(cfg, "trainer.convergence_window", 10))
+        conv_min_ep        = int(_cfg(cfg, "trainer.convergence_min_episodes", 50))
+        conv_d_wait        = _cfg(cfg, "trainer.convergence_delta_wait", None)
+        conv_d_ret         = _cfg(cfg, "trainer.convergence_delta_return", None)
 
         metrics = {
             "episode_returns":  [],
@@ -144,7 +149,7 @@ class DQNTrainer:
             "episode_routes":   [],
         }
         total_steps = 0
-        grad_steps  = 0
+        grad_steps  = getattr(self, "start_grad_steps", 0)
         start_time  = time.time()
 
         obs_dict, graph = self.env.reset(seed=seed)
@@ -163,6 +168,7 @@ class DQNTrainer:
             episode_reward = 0.0
             episode_steps  = 0
             sum_wait       = 0.0
+            last_wait      = 0.0
             total_arrived  = 0
             sum_queue      = 0.0
 
@@ -184,7 +190,8 @@ class DQNTrainer:
                 episode_reward += sum(reward_dict.values())
                 episode_steps  += 1
                 total_steps    += 1
-                sum_wait       += float(info.get("step_mean_waiting_time", 0.0))
+                last_wait       = float(info.get("step_mean_waiting_time", 0.0))
+                sum_wait       += last_wait
                 total_arrived  += int(info.get("step_throughput", 0))
                 sum_queue      += float(info.get("step_queue_length", 0.0))
 
@@ -226,7 +233,8 @@ class DQNTrainer:
 
             metrics["episode_returns"].append(episode_reward)
             metrics["episode_lengths"].append(episode_steps)
-            metrics["avg_waiting_time"].append(sum_wait / max(1, episode_steps))
+            ep_wait = last_wait
+            metrics["avg_waiting_time"].append(ep_wait)
             metrics["throughput"].append(total_arrived)
             metrics["avg_queue_length"].append(sum_queue / max(1, episode_steps))
             metrics["episode_routes"].append(active_route)
@@ -240,13 +248,13 @@ class DQNTrainer:
             h, rem  = divmod(elapsed, 3600)
             m, s    = divmod(rem, 60)
             t_str   = f"{h}h{m:02d}m{s:02d}s" if h else f"{m}m{s:02d}s"
-            loss_str = "(warming up)" if math.isnan(avg_loss) else f"{avg_loss:.4f}"
-            avg_wait = sum_wait / max(1, episode_steps)
-            avg_q    = sum_queue / max(1, episode_steps)
+            loss_str  = "(warming up)" if math.isnan(avg_loss) else f"{avg_loss:.4f}"
+            avg_q     = sum_queue / max(1, episode_steps)
+            avg_q     = sum_queue / max(1, episode_steps)
             print(
                 f"[Ep {episode + 1:4d}/{num_episodes}]"
                 f"  return={episode_reward:+9.2f}"
-                f"  wait={avg_wait:.1f}s"
+                f"  wait={ep_wait:.1f}s"
                 f"  tput={total_arrived:4d}"
                 f"  q={avg_q:.1f}"
                 f"  loss={loss_str}"
@@ -264,7 +272,7 @@ class DQNTrainer:
                     _fh.write(_json.dumps({
                         "episode":        episode + 1,
                         "episode_return": episode_reward,
-                        "wait":           avg_wait,
+                        "wait":           ep_wait,
                         "tput":           total_arrived,
                         "q":              avg_q,
                         "loss":           None if math.isnan(avg_loss) else avg_loss,
@@ -272,8 +280,35 @@ class DQNTrainer:
 
             if (episode + 1) % checkpoint_every == 0:
                 path = Path(checkpoint_dir) / f"checkpoint_ep{episode + 1}.pt"
+                self._last_grad_steps = grad_steps
                 self.save_checkpoint(str(path), total_steps, metrics)
 
+            # ── Stop file check (manual stop from UI) ────────────────────────
+            if stop_file and Path(stop_file).exists():
+                metrics["stop_reason"] = "manual_stop"
+                break
+
+            # ── Convergence check ─────────────────────────────────────────────
+            global_ep = episode + 1
+            if (conv_d_ret is not None or conv_d_wait is not None) and global_ep >= conv_min_ep:
+                n_ep = len(metrics["episode_returns"])
+                if n_ep >= conv_window * 2:
+                    ret_ok = True
+                    if conv_d_ret is not None:
+                        ret_recent = metrics["episode_returns"][-conv_window:]
+                        ret_prev   = metrics["episode_returns"][-conv_window * 2:-conv_window]
+                        ret_ok     = abs(sum(ret_recent) / conv_window - sum(ret_prev) / conv_window) <= conv_d_ret
+                    wait_ok = True
+                    if conv_d_wait is not None:
+                        w_recent = metrics["avg_waiting_time"][-conv_window:]
+                        w_prev   = metrics["avg_waiting_time"][-conv_window * 2:-conv_window]
+                        wait_ok  = abs(sum(w_recent) / conv_window - sum(w_prev) / conv_window) <= conv_d_wait
+                    if ret_ok and wait_ok:
+                        metrics["stop_reason"] = "converged"
+                        break
+
+        metrics.setdefault("stop_reason", "completed")
+        self._last_grad_steps = grad_steps
         return metrics
 
     def _select_actions(self, padded_obs: dict, graph: dict, padded_pf: list, epsilon: float) -> dict:
@@ -415,6 +450,7 @@ class DQNTrainer:
                 "head":       self.head.state_dict(),
                 "optimizer":  self.optimizer.state_dict(),
                 "step":       step,
+                "grad_steps": getattr(self, "_last_grad_steps", 0),
                 "cfg":        _cfg_to_dict(self.cfg),
                 "metrics":    metrics,
             },
@@ -435,6 +471,7 @@ class DQNTrainer:
         trainer.target_encoder.load_state_dict(ckpt["encoder"])
         trainer.target_gat.load_state_dict(ckpt["gat"])
         trainer.target_head.load_state_dict(ckpt["head"])
+        trainer.start_grad_steps = ckpt.get("grad_steps", 0)
         return trainer
 
 

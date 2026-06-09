@@ -196,6 +196,7 @@ def main():
         if args.checkpoint:
             trainer = DQNTrainer.load_checkpoint(args.checkpoint, cfg, env, device)
             if args.epsilon_start is not None:
+                cfg.setdefault("trainer", {})["epsilon_start"] = args.epsilon_start
                 trainer.start_grad_steps = 0
 
         start   = time.time()

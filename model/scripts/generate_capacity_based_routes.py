@@ -200,7 +200,8 @@ def write_stochastic_routes(
             f'    <flow id="f{i}" from="{src}" to="{dst}"'
             f' begin="{begin_time}" end="{end_time}"'
             f' probability="{prob:.6f}"'
-            f' departLane="free" departSpeed="max"/>'
+            f' departLane="free" departSpeed="random" departPos="random_free"'
+            f' arrivalPos="random"/>'
         )
 
     lines.append("</routes>")

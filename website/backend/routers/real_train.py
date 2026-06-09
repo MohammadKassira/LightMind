@@ -37,7 +37,6 @@ STAGE_LABELS = {
     "random_route_generation":    "Generating traffic demand scenarios…",
     "scenario_manifest_creation": "Building training configuration…",
     "independent_dqn_training":   "Training GAT model…",
-    "evaluation":                 "Running fixed-time baseline…",
     "complete":                   "Training complete!",
 }
 
@@ -45,8 +44,7 @@ STAGE_PROGRESS = {
     "initialization":             10,
     "random_route_generation":    22,
     "scenario_manifest_creation": 32,
-    "independent_dqn_training":   35,  # 35→75% filled by episode progress on frontend
-    "evaluation":                 80,
+    "independent_dqn_training":   35,  # 35→95% filled by episode progress on frontend
     "complete":                   100,
 }
 

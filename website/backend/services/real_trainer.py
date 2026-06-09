@@ -35,6 +35,7 @@ _ml_project_root = Path(os.environ.get(
 ))
 
 _running_sessions: set[str] = set()
+_running_processes: dict[str, subprocess.Popen] = {}
 _running_lock = threading.Lock()
 
 
@@ -253,6 +254,8 @@ def start_real_training(session_id: str, net_path: str, pass_threshold_pct: floa
                 cwd=ml_project_root,
                 env=_env,
             )
+            with _running_lock:
+                _running_processes[session_id] = process
 
             ep_pattern = re.compile(r"\[Ep\s+(\d+)/(\d+)\]")
             progress_path = WEB_JOBS_ROOT / session_id / "reports" / "training_progress.json"
@@ -270,7 +273,7 @@ def start_real_training(session_id: str, net_path: str, pass_threshold_pct: floa
                         "phase": "training",
                         "available": True,
                     }))
-                append_training_log(session_id, line)
+                    append_training_log(session_id, f"[Ep {cur}/{total}]")
 
             process.wait()
             if process.returncode != 0:
@@ -287,54 +290,17 @@ def start_real_training(session_id: str, net_path: str, pass_threshold_pct: floa
                 _shutil.copy(trained_checkpoint, results_checkpoint / "controller.pt")
                 append_training_log(session_id, "Model checkpoint saved")
 
-            # Step 5: Fixed-time baseline — same conditions as GAT eval (seeds 0,100,200,300,400)
-            current_stage = "evaluation"
-            _write_status(session_id, "evaluation", "running")
-            append_training_log(session_id, "Starting fixed-time baseline evaluation (5 episodes, built-in TL program)...")
-            baseline_path = WEB_JOBS_ROOT / session_id / "reports" / "baseline_summary.json"
-            try:
-                import sys as _sys
-                _model_path = str(ml_project_root / "model")
-                if _model_path not in _sys.path:
-                    _sys.path.insert(0, _model_path)
-                import yaml as _yaml
-                _cfg = _yaml.safe_load(config_path.read_text())
-                _rou_path = Path(_cfg["network"]["rou"])
-                from evaluation.eval_runner import evaluate_fixed_time
-                bl = evaluate_fixed_time(
-                    net_file=str(net_path_obj),
-                    route_file=str(_rou_path),
-                    num_episodes=5,
-                    seeds=[0, 100, 200, 300, 400],
-                    max_steps=_cfg["network"].get("max_steps", 720),
-                    begin_time=_cfg["network"].get("begin_time", 0),
-                )
-                bl_out = {k: v for k, v in bl.items() if k != "episode_records"}
-                baseline_path.write_text(json.dumps({
-                    "available": True,
-                    "source": "fixed_time_builtin",
-                    "metrics": bl_out,
-                }))
-                append_training_log(session_id, "Fixed-time baseline complete")
-            except Exception as bl_exc:
-                baseline_path.write_text(json.dumps({"available": False, "error": str(bl_exc)}))
-                append_training_log(session_id, f"Fixed-time baseline failed: {bl_exc}")
-
-            # Step 6: Write job_result.json from final training_metrics.json + eval_metrics.json
-            # NOTE: reads training_metrics.json (final full dict), NOT training_metrics.jsonl (live stream)
-            eval_path    = ml_project_root / "checkpoints" / session_id / "eval_metrics.json"
+            # Step 5: Write job_result.json — evaluation happens on page 4
             metrics_path = ml_project_root / "checkpoints" / session_id / "training_metrics.json"
-            eval_data    = json.loads(eval_path.read_text()) if eval_path.exists() else {}
             metrics_data = json.loads(metrics_path.read_text()) if metrics_path.exists() else {}
-            baseline_data = json.loads(baseline_path.read_text()) if baseline_path.exists() else {"available": False}
 
             result_path = WEB_JOBS_ROOT / session_id / "reports" / "job_result.json"
             result_path.write_text(json.dumps({
                 "available": True,
                 "source": "real_training",
                 "session_id": session_id,
-                "eval_metrics": eval_data,
-                "baseline_metrics": baseline_data,
+                "eval_metrics": {},
+                "baseline_metrics": {"available": False},
                 "training_metrics": {
                     "episode_returns":  metrics_data.get("episode_returns", []),
                     "losses":           metrics_data.get("losses", []),
@@ -346,7 +312,7 @@ def start_real_training(session_id: str, net_path: str, pass_threshold_pct: floa
             }))
 
             _write_status(session_id, "complete", "passed")
-            append_training_log(session_id, "Training pipeline complete")
+            append_training_log(session_id, "Training complete — proceed to Results to run evaluation")
 
         except Exception as exc:
             _write_status(session_id, current_stage, "failed", {"error": str(exc)})
@@ -354,13 +320,15 @@ def start_real_training(session_id: str, net_path: str, pass_threshold_pct: floa
         finally:
             with _running_lock:
                 _running_sessions.discard(session_id)
+                _running_processes.pop(session_id, None)
 
     threading.Thread(target=run, daemon=True).start()
     return True
 
 
 def stop_training(session_id: str) -> bool:
-    """Request early stop by writing a stop signal file the trainer polls after each episode."""
+    """Request early stop. Writes the stop-signal file; the trainer detects it after the
+    current episode, saves the checkpoint, and exits cleanly."""
     stop_file = WEB_JOBS_ROOT / session_id / "reports" / "stop_requested"
     if not (WEB_JOBS_ROOT / session_id / "reports").exists():
         return False
@@ -433,6 +401,8 @@ def resume_training(session_id: str) -> bool:
                 cwd=ml_project_root,
                 env=_env,
             )
+            with _running_lock:
+                _running_processes[session_id] = process
 
             ep_pattern    = re.compile(r"\[Ep\s+(\d+)/(\d+)\]")
             progress_path2 = reports_dir / "training_progress.json"
@@ -531,6 +501,7 @@ def resume_training(session_id: str) -> bool:
         finally:
             with _running_lock:
                 _running_sessions.discard(session_id)
+                _running_processes.pop(session_id, None)
 
     threading.Thread(target=run, daemon=True).start()
     return True
@@ -549,8 +520,15 @@ def retrain(session_id: str, mode: str) -> bool:
         if session_id in _running_sessions:
             return False
 
-    reports_dir = WEB_JOBS_ROOT / session_id / "reports"
-    checkpoint  = _ml_project_root / "checkpoints" / session_id / "final.pt"
+    reports_dir  = WEB_JOBS_ROOT / session_id / "reports"
+    ckpt_dir     = _ml_project_root / "checkpoints" / session_id
+    checkpoint   = ckpt_dir / "final.pt"
+    if not checkpoint.exists():
+        # Training may have been terminated before final.pt was written; fall back to
+        # the latest per-episode checkpoint so retraining can still proceed.
+        candidates = sorted(ckpt_dir.glob("checkpoint_ep*.pt"))
+        if candidates:
+            checkpoint = candidates[-1]
     config_dir  = Path(__file__).parent.parent / "data" / "uploads" / session_id
     config_path = next(config_dir.glob("*_training_config.yaml"), None)
 
@@ -606,6 +584,8 @@ def retrain(session_id: str, mode: str) -> bool:
                 cwd=ml_project_root,
                 env=_env,
             )
+            with _running_lock:
+                _running_processes[session_id] = process
 
             ep_pattern    = re.compile(r"\[Ep\s+(\d+)/(\d+)\]")
             progress_path = reports_dir / "training_progress.json"
@@ -699,6 +679,7 @@ def retrain(session_id: str, mode: str) -> bool:
         finally:
             with _running_lock:
                 _running_sessions.discard(session_id)
+                _running_processes.pop(session_id, None)
 
     threading.Thread(target=run, daemon=True).start()
     return True
