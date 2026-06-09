@@ -2,7 +2,7 @@
 
 > **Adaptive traffic signal control powered by Graph Attention Networks, trained on real city road networks and deployable to new cities via a web dashboard.**
 
-<video src="DEMO.mp4" controls width="100%"></video>
+[Watch the demo](DEMO.mp4)
 
 **Team:** Mohamad Al Aalami · Hasan Haidar · Mohamad Kassira  
 **Course:** EECE 490  
