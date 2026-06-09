@@ -1,0 +1,82 @@
+{
+  "created_at_utc": "2026-06-09T06:40:01.373545+00:00",
+  "evaluation_log": {
+    "arterial4x4": {
+      "action": "existing_full_gat_runs_extracted",
+      "checkpoint": "/home/mohammad-kassira/traffic_rl/external/full_gat_friend/checkpoints/Aretrial4x4_final.pt",
+      "horizon_parity_all": true,
+      "passed": 9,
+      "per_run_csv": "/home/mohammad-kassira/traffic_rl/benchmark/results/full_gat_retrained/arterial4x4_per_run.csv",
+      "run_count": 9,
+      "summary_csv": "/home/mohammad-kassira/traffic_rl/benchmark/results/full_gat_retrained/arterial4x4_summary_by_network_level.csv"
+    },
+    "cologne8": {
+      "action": "evaluation_run",
+      "checkpoint": "/home/mohammad-kassira/traffic_rl/external/full_gat_friend/checkpoints/cologne8_ep300_test.pt",
+      "horizon_parity_all": true,
+      "passed": 9,
+      "per_run_csv": "/home/mohammad-kassira/traffic_rl/benchmark/results/full_gat_retrained/cologne8_per_run.csv",
+      "run_count": 9,
+      "summary_csv": "/home/mohammad-kassira/traffic_rl/benchmark/results/full_gat_retrained/cologne8_summary_by_network_level.csv"
+    },
+    "ingolstadt7": {
+      "action": "existing_full_gat_runs_extracted",
+      "checkpoint": "/home/mohammad-kassira/traffic_rl/external/full_gat_friend/checkpoints/inglostadt7_final.pt",
+      "horizon_parity_all": true,
+      "passed": 9,
+      "per_run_csv": "/home/mohammad-kassira/traffic_rl/benchmark/results/full_gat_retrained/ingolstadt7_per_run.csv",
+      "run_count": 9,
+      "summary_csv": "/home/mohammad-kassira/traffic_rl/benchmark/results/full_gat_retrained/ingolstadt7_summary_by_network_level.csv"
+    }
+  },
+  "files_created": [
+    "/home/mohammad-kassira/traffic_rl/benchmark/results/final_excel/full_gat_results.xlsx",
+    "/home/mohammad-kassira/traffic_rl/benchmark/results/final_excel/full_comparison_report.xlsx"
+  ],
+  "findings": {
+    "full_gat_beats_dqn_v2_all_kpis": [
+      "ingolstadt1"
+    ],
+    "full_gat_beats_fixed_time_and_maxpressure_all_kpis": [],
+    "overall_rank_order_lowest_score_best": [
+      [
+        "DQN v2",
+        58.0
+      ],
+      [
+        "MaxPressure",
+        87.0
+      ],
+      [
+        "Full GAT",
+        87.0
+      ],
+      [
+        "Fixed-Time",
+        88.0
+      ]
+    ]
+  },
+  "network_count": 8,
+  "run_count": 72,
+  "runtime_s": 1205.267416715622,
+  "source_log": {
+    "arterial4x4": "full_gat_retrained",
+    "bologna_pasubio": "full_gat_retrained",
+    "cologne1": "full_gat",
+    "cologne8": "full_gat_retrained",
+    "grid4x4": "full_gat",
+    "ingolstadt1": "full_gat",
+    "ingolstadt21": "full_gat_retrained",
+    "ingolstadt7": "full_gat_retrained"
+  },
+  "validation": {
+    "comparison_excel_created": true,
+    "full_gat_excel_created": true,
+    "full_gat_rows_72_for_8_specified_networks": true,
+    "horizon_parity_confirmed": true,
+    "no_existing_results_modified": true,
+    "overall_status": "PASS",
+    "pending_evaluations_pass": true
+  }
+}

@@ -14,16 +14,8 @@ _backend_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(_backend_dir))
 sys.path.insert(0, str(_backend_dir / "traffic_rl"))
 
-try:
-    from services.template_generator import ensure_demand_template
-    ensure_demand_template()
-except Exception:
-    pass
-
 from services.route_generator import generate_routes_for_network
 from services.config_generator import create_training_config
-from traffic_rl.benchmark.controllers.independent_dqn_v2_web import WebJobConfig
-from services.net_trainer import run_web_job_from_net
 
 WEB_JOBS_ROOT = Path(__file__).parent.parent / "data" / "web_jobs"
 
@@ -134,7 +126,8 @@ def get_training_progress(session_id: str) -> dict:
     return result
 
 
-def build_config(session_id: str, net_path: str) -> WebJobConfig:
+def build_config(session_id: str, net_path: str):
+    from traffic_rl.benchmark.controllers.independent_dqn_v2_web import WebJobConfig
     return WebJobConfig(
         job_id=session_id,
         osm_path=Path(net_path),

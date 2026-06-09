@@ -2,6 +2,7 @@
 title: Try2
 sdk: docker
 app_port: 7860
+startup_duration_timeout: 1h
 ---
 # LightMind — AI Traffic Signal Control
 
