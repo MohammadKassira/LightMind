@@ -9,7 +9,8 @@ os.environ.setdefault("DISPLAY", ":99")
 import shutil
 from fastapi import FastAPI, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import FileResponse, Response
+from fastapi.staticfiles import StaticFiles
 
 from routers import demand_template, deployment, model_download, parse_schedule, real_train, results, train, upload, ws
 from services.real_trainer import is_sumo_available
@@ -37,6 +38,7 @@ origins = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=r"https://.*\.hf\.space",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -131,3 +133,22 @@ async def novnc_ws_proxy(websocket: WebSocket) -> None:
             await websocket.close()
         except Exception:
             pass
+
+
+# ── Serve built React frontend (HF Spaces / single-container) ─────────────────
+
+_STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+
+if os.path.isdir(os.path.join(_STATIC_DIR, "assets")):
+    app.mount("/assets", StaticFiles(directory=os.path.join(_STATIC_DIR, "assets")), name="static-assets")
+
+
+@app.get("/{full_path:path}", include_in_schema=False)
+async def serve_spa(full_path: str) -> Response:
+    file_path = os.path.join(_STATIC_DIR, full_path)
+    if full_path and os.path.isfile(file_path):
+        return FileResponse(file_path)
+    index = os.path.join(_STATIC_DIR, "index.html")
+    if os.path.isfile(index):
+        return FileResponse(index)
+    return Response(content=b"Frontend not built", status_code=404)
