@@ -88,6 +88,7 @@ def run(
         max_steps=max_steps,
         begin_time=begin_time,
         override_tl_program=True,
+        step_delay_sec=1.0,   # 1 s real time per SUMO second — no speed-up
     )
 
     # Notify backend: deployment started
@@ -101,6 +102,17 @@ def run(
 
     # Loop forever — process is killed when the user clicks Stop
     while True:
+        if episode > 0:
+            # Tell the dashboard we're between episodes before the SUMO reload
+            try:
+                requests.post(
+                    callback_url,
+                    json={"event": "episode_end", "episode": episode},
+                    timeout=2,
+                )
+            except Exception:
+                pass
+
         obs_dict, graph = env.reset(seed=seed + episode)
         done = False
 

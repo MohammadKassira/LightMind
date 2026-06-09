@@ -22,8 +22,9 @@ router = APIRouter(tags=["deployment"])
 # ── In-memory state ───────────────────────────────────────────────────────────
 
 _status: dict = {
-    "status": "stopped",   # stopped | starting | running | done | error
+    "status": "stopped",   # stopped | starting | running | restarting | done | error
     "error": None,
+    "episode": 0,
     "last": None,          # most recent callback payload
     "log": deque(maxlen=50),
 }
@@ -86,7 +87,7 @@ async def start_deployment(session_id: str) -> dict:
     # ── Kill any lingering processes ──────────────────────────────────────
     _kill_all()
 
-    _status.update({"status": "starting", "error": None, "last": None})
+    _status.update({"status": "starting", "error": None, "episode": 0, "last": None})
     _status["log"].clear()
 
     ml_root = Path(os.environ.get("ML_PROJECT_ROOT", str(_BACKEND_DIR.parent)))
@@ -145,10 +146,11 @@ async def start_deployment(session_id: str) -> dict:
 @router.get("/api/deployment/{session_id}/status")
 async def deployment_status(session_id: str) -> dict:
     return {
-        "status": _status["status"],
-        "error":  _status["error"],
-        "last":   _status["last"],
-        "log":    list(_status["log"]),
+        "status":  _status["status"],
+        "error":   _status["error"],
+        "episode": _status["episode"],
+        "last":    _status["last"],
+        "log":     list(_status["log"]),
     }
 
 
@@ -160,19 +162,23 @@ async def deployment_callback(request: Request) -> dict:
 
     if event == "started":
         _status["status"] = "running"
+        _status["episode"] = 1
 
     elif event == "step":
         _status["status"] = "running"
         _status["last"] = body
-        # Keep a log of last 50 steps (slim version for the inference log table)
         _status["log"].append({
-            "step":         body.get("step"),
-            "sim_time":     body.get("sim_time"),
-            "latency_ms":   body.get("latency_ms"),
+            "step":          body.get("step"),
+            "sim_time":      body.get("sim_time"),
+            "latency_ms":    body.get("latency_ms"),
             "fallback_tier": body.get("fallback_tier"),
-            "waiting_time": body.get("waiting_time"),
-            "vehicles":     body.get("vehicles"),
+            "waiting_time":  body.get("waiting_time"),
+            "vehicles":      body.get("vehicles"),
         })
+
+    elif event == "episode_end":
+        _status["status"] = "restarting"
+        _status["episode"] = body.get("episode", _status["episode"]) + 1
 
     elif event == "done":
         _status["status"] = "done"

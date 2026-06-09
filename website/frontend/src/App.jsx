@@ -43,7 +43,6 @@ export default function App() {
   const [uploadedFiles, setUploadedFiles] = useState({ net: "", demand: "" });
   const [trainingSessionKey, setTrainingSessionKey] = useState(0);
   const [restored, setRestored] = useState(false);
-  const [demandData, setDemandData] = useState(null); // parsed from UploadScreen
   const [trainingOptions, setTrainingOptions] = useState({ runBaseline: false, greenDuration: 60, demandSequence: null });
 
   // On mount: restore ONLY when the URL hash explicitly contains page=N (i.e. a same-tab refresh).
@@ -114,7 +113,6 @@ export default function App() {
     setSessionId("");
     setNetAbsPath("");
     setUploadedFiles({ net: "", demand: "" });
-    setDemandData(null);
     setTrainingSessionKey((k) => k + 1);
   };
 
@@ -122,7 +120,6 @@ export default function App() {
     setSessionId(newSessionId);
     setNetAbsPath(absPath || "");
     setUploadedFiles({ net: netFilename, demand: "" });
-    setDemandData(null);
     setStep("upload");
     setTrainingSessionKey((k) => k + 1);
   };
@@ -172,7 +169,6 @@ export default function App() {
               sessionId={sessionId}
               uploadedFiles={uploadedFiles}
               onSessionCreated={resetForNewMap}
-              onDemandParsed={setDemandData}
               onNext={() => setStep("model")}
             />
           )}
@@ -182,7 +178,6 @@ export default function App() {
             <ModelSelect
               key={`model-${sessionId}`}
               sessionId={sessionId}
-              demandData={demandData}
               onBack={() => setStep("upload")}
               onTrainingStarted={(opts) => { setTrainingOptions(opts || {}); setStep("training"); }}
             />

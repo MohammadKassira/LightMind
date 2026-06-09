@@ -1,18 +1,11 @@
 import { useState } from "react";
 
-export default function ModelSelect({ sessionId, demandData, onBack, onTrainingStarted }) {
+export default function ModelSelect({ sessionId, onBack, onTrainingStarted }) {
   const [passThreshold, setPassThreshold] = useState(25);
 
   const handleStart = () => {
     onTrainingStarted({ passThresholdPct: passThreshold });
   };
-
-  // Demand summary for Run Summary box
-  const demandSummaryLine = (() => {
-    if (!demandData) return "Auto — equal Low / Medium / High cycling";
-    if (demandData.mixText) return `Custom schedule (${demandData.periods?.length ?? "?"} periods) — ${demandData.mixText}`;
-    return `Custom schedule (${demandData.sequence?.length ?? "?"} episodes)`;
-  })();
 
   return (
     <section className="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">
@@ -33,22 +26,11 @@ export default function ModelSelect({ sessionId, demandData, onBack, onTrainingS
           </div>
         </div>
 
-        {/* Demand summary — read-only, set on page 1 */}
-        {demandData ? (
-          <div className="rounded-2xl border border-emerald-400/25 bg-emerald-400/8 px-4 py-3">
-            <p className="text-xs uppercase tracking-[0.3em] text-emerald-300/70 mb-1">Demand Schedule</p>
-            <p className="text-sm font-medium text-emerald-100">{demandData.previewText}</p>
-            {demandData.mixText && (
-              <p className="mt-1 text-xs text-slate-400">Effective mix: {demandData.mixText}</p>
-            )}
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3">
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-500 mb-1">Demand Schedule</p>
-            <p className="text-sm text-slate-400">Auto — equal Low / Medium / High cycling</p>
-            <p className="mt-1 text-xs text-slate-500">To customize, upload a demand schedule on the previous page.</p>
-          </div>
-        )}
+        {/* Demand schedule — always auto-cycling */}
+        <div className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3">
+          <p className="text-xs uppercase tracking-[0.3em] text-slate-500 mb-1">Demand Schedule</p>
+          <p className="text-sm text-slate-400">Auto — equal Low / Medium / High cycling</p>
+        </div>
 
         {/* Baseline comparison */}
         <div>
@@ -80,7 +62,7 @@ export default function ModelSelect({ sessionId, demandData, onBack, onTrainingS
             <div className="flex items-start justify-between gap-3">
               <span className="shrink-0 text-slate-400">Demand</span>
               <span className="max-w-[60%] text-right text-cyan-200 text-xs leading-snug">
-                {demandSummaryLine}
+                Auto — equal Low / Medium / High cycling
               </span>
             </div>
             <div className="flex items-start justify-between gap-3">

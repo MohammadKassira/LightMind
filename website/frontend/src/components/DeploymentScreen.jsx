@@ -101,6 +101,7 @@ export default function DeploymentScreen({ sessionId, onBack, onReset }) {
   const last = status.last;
   const tier = last?.fallback_tier ?? 0;
   const isLive = status.status === "running";
+  const isRestarting = status.status === "restarting";
   const log = status.log ?? [];
 
   return (
@@ -116,6 +117,17 @@ export default function DeploymentScreen({ sessionId, onBack, onReset }) {
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {isLive && <WatchdogBadge tier={tier} />}
+          {isRestarting && (
+            <div className="flex items-center gap-2 rounded-xl border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-300">
+              <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
+              Episode {status.episode} — restarting…
+            </div>
+          )}
+          {isLive && status.episode > 0 && (
+            <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-400">
+              Episode {status.episode}
+            </span>
+          )}
           {(status.status === "stopped" || status.status === "done") && (
             <button
               onClick={handleStart}
@@ -125,7 +137,7 @@ export default function DeploymentScreen({ sessionId, onBack, onReset }) {
               {starting ? "Starting…" : "▶ Deploy Model"}
             </button>
           )}
-          {(status.status === "starting" || isLive) && (
+          {(status.status === "starting" || isLive || isRestarting) && (
             <button
               onClick={handleStop}
               className="rounded-2xl border border-red-400/30 bg-red-400/10 px-5 py-3 text-sm font-medium text-red-200 transition hover:border-red-300/60"
