@@ -3,7 +3,7 @@ FROM node:20-alpine AS frontend-builder
 
 WORKDIR /frontend
 COPY website/frontend/package*.json ./
-RUN npm ci
+RUN npm install
 COPY website/frontend/ .
 # Empty string → same-origin API calls (no host prefix), correct for HF Spaces
 ENV VITE_API_URL=""
