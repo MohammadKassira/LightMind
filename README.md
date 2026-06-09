@@ -1,12 +1,8 @@
 ---
-title: LightMind
-emoji: 🚦
-colorFrom: blue
-colorTo: green
+title: Try2
 sdk: docker
-pinned: false
+app_port: 7860
 ---
-
 # LightMind — AI Traffic Signal Control
 
 LightMind is a full-stack AI traffic control system. Upload a SUMO network file, configure training, and watch the Independent DQN v2 agent learn to optimise traffic signals in real time.
