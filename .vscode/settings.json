@@ -1,0 +1,9 @@
+{
+    "python.terminal.useEnvFile": true,
+    "chat.tools.terminal.autoApprove": {
+        "/^python model/scripts/generate_capacity_based_routes\\.py --net model/networks/external/RESCO/ingolstadt1/ingolstadt1\\.net\\.xml --source model/networks/external/RESCO/ingolstadt1/ingolstadt1\\.rou\\.xml --output model/networks/external/RESCO/ingolstadt1 --name ingolstadt1 --begin-time 57600 --time-window 3600 --source-type trip$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

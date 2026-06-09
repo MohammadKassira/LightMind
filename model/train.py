@@ -50,6 +50,10 @@ def main():
                         help="Greedy eval episodes after training (0 to skip)")
     parser.add_argument("--log-file", default=None,
                         help="Write all output to this file (UTF-8) in addition to stdout")
+    parser.add_argument("--metrics-file", default=None,
+                        help="Path to .jsonl file for per-episode KPI streaming (one JSON line per episode)")
+    parser.add_argument("--epsilon-start", type=float, default=None,
+                        help="Override trainer.epsilon_start and reset grad-step counter to 0 (for re-explore retrain)")
     args = parser.parse_args()
 
     # Python-level tee: write to both stdout and log file so no pipe is needed
@@ -88,6 +92,8 @@ def main():
         cfg["model"]["gat"]["neighbor_masking"] = False
     if args.episodes is not None:
         cfg.setdefault("trainer", {})["num_episodes"] = args.episodes
+    if args.epsilon_start is not None:
+        cfg.setdefault("trainer", {})["epsilon_start"] = args.epsilon_start
     cfg.setdefault("reward", {})["use_pressure"] = True
 
     # --- Multi-network path (cfg["networks"] list present) ---
@@ -189,9 +195,11 @@ def main():
         trainer = DQNTrainer(cfg, env, device=device)
         if args.checkpoint:
             trainer = DQNTrainer.load_checkpoint(args.checkpoint, cfg, env, device)
+            if args.epsilon_start is not None:
+                trainer.start_grad_steps = 0
 
         start   = time.time()
-        metrics = trainer.train(num_episodes=num_episodes)
+        metrics = trainer.train(num_episodes=num_episodes, metrics_file=args.metrics_file)
 
         elapsed = int(time.time() - start)
         h, rem  = divmod(elapsed, 3600)

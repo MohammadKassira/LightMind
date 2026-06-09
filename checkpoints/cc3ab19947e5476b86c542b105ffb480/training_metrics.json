@@ -1,0 +1,29 @@
+{
+  "episode_returns": [
+    -4775.792092890479,
+    -4189.542282591574
+  ],
+  "episode_lengths": [
+    720,
+    720
+  ],
+  "losses": [],
+  "epsilons": [],
+  "q_mean": [],
+  "avg_waiting_time": [
+    1481.9388506073087,
+    1577.3076731347478
+  ],
+  "throughput": [
+    7,
+    4
+  ],
+  "avg_queue_length": [
+    117.26527777777778,
+    132.2722222222222
+  ],
+  "episode_routes": [
+    "cc3ab19947e5476b86c542b105ffb480_light_stochastic.rou",
+    "cc3ab19947e5476b86c542b105ffb480_dense_stochastic.rou"
+  ]
+}

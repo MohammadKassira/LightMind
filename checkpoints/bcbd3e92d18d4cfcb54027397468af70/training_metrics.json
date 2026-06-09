@@ -1,0 +1,36 @@
+{
+  "episode_returns": [
+    -4712.417463297024,
+    -3717.6674609119073,
+    -4186.4174958039075
+  ],
+  "episode_lengths": [
+    720,
+    720,
+    720
+  ],
+  "losses": [],
+  "epsilons": [],
+  "q_mean": [],
+  "avg_waiting_time": [
+    1473.1515888930082,
+    1555.7098887955365,
+    1510.242486671468
+  ],
+  "throughput": [
+    8,
+    9,
+    13
+  ],
+  "avg_queue_length": [
+    122.15972222222223,
+    133.35416666666666,
+    127.49444444444444
+  ],
+  "episode_routes": [
+    "bcbd3e92d18d4cfcb54027397468af70_light_stochastic.rou",
+    "bcbd3e92d18d4cfcb54027397468af70_heavy_stochastic.rou",
+    "bcbd3e92d18d4cfcb54027397468af70_medium_stochastic.rou"
+  ],
+  "stop_reason": "manual_stop"
+}

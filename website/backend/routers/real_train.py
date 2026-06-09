@@ -122,15 +122,16 @@ async def training_logs(session_id: str) -> dict:
 
 @router.get("/api/real-train/{session_id}/latest-episode-kpis")
 async def latest_episode_kpis(session_id: str) -> dict:
-    """Return the most recent per-episode KPIs from training_metrics.jsonl (live stream file)."""
+    """Return the most recent per-episode KPIs and full history from training_metrics.jsonl."""
     path = WEB_JOBS_ROOT / session_id / "reports" / "training_metrics.jsonl"
     if not path.exists():
         return {"available": False}
     try:
-        lines = path.read_text().strip().splitlines()
+        lines = [l for l in path.read_text().strip().splitlines() if l]
         if not lines:
             return {"available": False}
-        return {"available": True, **json.loads(lines[-1])}
+        history = [json.loads(l) for l in lines]
+        return {"available": True, "history": history, **history[-1]}
     except Exception:
         return {"available": False}
 

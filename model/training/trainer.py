@@ -101,7 +101,7 @@ class DQNTrainer:
     # Public API
     # ------------------------------------------------------------------
 
-    def train(self, num_episodes: int | None = None) -> dict:
+    def train(self, num_episodes: int | None = None, metrics_file: str | None = None) -> dict:
         """Run the DQN training loop.
 
         Returns:
@@ -255,6 +255,20 @@ class DQNTrainer:
                 f"  elapsed={t_str}",
                 flush=True,
             )
+
+            if metrics_file is not None:
+                import json as _json
+                _mf = Path(metrics_file)
+                _mf.parent.mkdir(parents=True, exist_ok=True)
+                with _mf.open("a", encoding="utf-8") as _fh:
+                    _fh.write(_json.dumps({
+                        "episode":        episode + 1,
+                        "episode_return": episode_reward,
+                        "wait":           avg_wait,
+                        "tput":           total_arrived,
+                        "q":              avg_q,
+                        "loss":           None if math.isnan(avg_loss) else avg_loss,
+                    }) + "\n")
 
             if (episode + 1) % checkpoint_every == 0:
                 path = Path(checkpoint_dir) / f"checkpoint_ep{episode + 1}.pt"
