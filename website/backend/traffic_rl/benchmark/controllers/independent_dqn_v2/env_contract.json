@@ -1,0 +1,245 @@
+{
+  "contract_version": "independent_dqn_v2_contract_locked_2026-05-23",
+  "created_at_utc": "2026-05-23T16:28:14.441585+00:00",
+  "source": {
+    "derived_from_archived_plan": "/home/mohammad-kassira/traffic_rl/benchmark/archive/independent_dqn_reset_20260523T161057Z/benchmark/logs/independent_dqn_main_training_launch_plan.json",
+    "reportable_networks": [
+      "cologne1",
+      "ingolstadt1",
+      "cologne8",
+      "ingolstadt7",
+      "ingolstadt21",
+      "grid4x4",
+      "bologna_pasubio",
+      "arterial4x4",
+      "toronto",
+      "MoST"
+    ]
+  },
+  "observation_version": "local_only_obs_v2",
+  "reward_version": "aggregate_local_efficient_pressure_v2",
+  "stopping_rule": {
+    "primary_rule": "fixed_compute_budget",
+    "statement": "Independent DQN v2 is trained under a fixed reproducible compute budget per network. Reward/loss/KPI curves are logged to assess learning behavior and stability, but the primary stopping rule is the predeclared episode budget unless an explicitly documented early-stopping or wall-clock rule is enabled.",
+    "convergence_wording_allowed": false,
+    "default_early_stopping_enabled": false,
+    "default_max_wall_clock_hours_enabled": false
+  },
+  "fixed_compute_budget_policy": {
+    "per_network_episode_budgets": {
+      "cologne1": 500,
+      "ingolstadt1": 500,
+      "cologne8": 900,
+      "ingolstadt7": 900,
+      "ingolstadt21": 1300,
+      "grid4x4": 1300,
+      "bologna_pasubio": 900,
+      "arterial4x4": 1300,
+      "toronto": 1800,
+      "MoST": 2200
+    },
+    "per_network_compute_budget": {
+      "cologne1": {
+        "planned_episodes": 500,
+        "max_steps_per_episode": 720,
+        "decision_interval_s": 5.0,
+        "min_green_s": 7.0
+      },
+      "ingolstadt1": {
+        "planned_episodes": 500,
+        "max_steps_per_episode": 720,
+        "decision_interval_s": 5.0,
+        "min_green_s": 7.0
+      },
+      "cologne8": {
+        "planned_episodes": 900,
+        "max_steps_per_episode": 720,
+        "decision_interval_s": 5.0,
+        "min_green_s": 7.0
+      },
+      "ingolstadt7": {
+        "planned_episodes": 900,
+        "max_steps_per_episode": 720,
+        "decision_interval_s": 5.0,
+        "min_green_s": 7.0
+      },
+      "ingolstadt21": {
+        "planned_episodes": 1300,
+        "max_steps_per_episode": 720,
+        "decision_interval_s": 5.0,
+        "min_green_s": 7.0
+      },
+      "grid4x4": {
+        "planned_episodes": 1300,
+        "max_steps_per_episode": 720,
+        "decision_interval_s": 5.0,
+        "min_green_s": 7.0
+      },
+      "bologna_pasubio": {
+        "planned_episodes": 900,
+        "max_steps_per_episode": 720,
+        "decision_interval_s": 5.0,
+        "min_green_s": 7.0
+      },
+      "arterial4x4": {
+        "planned_episodes": 1300,
+        "max_steps_per_episode": 720,
+        "decision_interval_s": 5.0,
+        "min_green_s": 7.0
+      },
+      "toronto": {
+        "planned_episodes": 1800,
+        "max_steps_per_episode": 720,
+        "decision_interval_s": 5.0,
+        "min_green_s": 7.0
+      },
+      "MoST": {
+        "planned_episodes": 2200,
+        "max_steps_per_episode": 720,
+        "decision_interval_s": 5.0,
+        "min_green_s": 7.0
+      }
+    },
+    "budget_scope": "network-local training from scratch; no transfer across networks"
+  },
+  "normalization_method": {
+    "scope": "per-lane/per-tls constants derived once from SUMO network metadata at startup",
+    "manual_global_constants_allowed": false,
+    "record_in": [
+      "static_cache",
+      "run_manifest.json",
+      "training_config.json",
+      "training_manifest.json"
+    ]
+  },
+  "q_max_method": {
+    "name": "lane_capacity_floor",
+    "formula": "q_max_lane = max(1, floor(lane_length_m / avg_vehicle_length_m))",
+    "avg_vehicle_length_m": 7.5
+  },
+  "phase_timer_normalization_method": {
+    "name": "tls_program_green_duration_cap",
+    "formula": "phase_timer_norm = min(phase_elapsed_s / phase_timer_max_s, 1.0)",
+    "phase_timer_max_s_source": "derived from TLS program metadata (selectable green-phase duration cap)"
+  },
+  "lookahead_distance_method": {
+    "name": "speed_times_decision_interval",
+    "formula": "lookahead_distance_m_lane = lane_max_speed_mps * decision_interval_s",
+    "lane_speed_source": "SUMO lane metadata at startup cache build"
+  },
+  "observation_contract": {
+    "field_order": [
+      "phase_one_hot",
+      "phase_timer_normalized",
+      "incoming_queue_normalized_per_lane",
+      "incoming_running_lookahead_normalized_per_lane",
+      "outgoing_queue_normalized_per_lane"
+    ],
+    "neighbor_observations_allowed": false,
+    "graph_message_passing_allowed": false,
+    "shared_weights_allowed": false,
+    "transfer_across_networks_allowed": false
+  },
+  "action_space_definition": {
+    "action": "target selectable green phase index for that TLS",
+    "action_mask": {
+      "key": "action_mask",
+      "shape": "(num_selectable_green_phases,)",
+      "dtype": "bool",
+      "true_meaning": "valid action",
+      "false_meaning": "invalid action"
+    },
+    "agent_selects_yellow_or_all_red_directly": false
+  },
+  "yellow_all_red_handling": {
+    "handled_by": "environment/SUMO transition logic",
+    "agent_direct_control": false
+  },
+  "train_every_steps": 8,
+  "learning_starts_steps": 1000,
+  "training_metrics_contract": {
+    "purpose": "lightweight per-episode diagnostics/proxies during training",
+    "heavy_benchmark_xml_default": false,
+    "metrics": [
+      "episode_reward_sum",
+      "episode_loss_mean",
+      "episode_loss_update_count",
+      "episode_wall_time_s",
+      "episode_steps",
+      "episode_arrived_vehicles",
+      "episode_throughput_proxy",
+      "episode_mean_queue_count_or_length_proxy",
+      "episode_phase_change_count",
+      "episode_phase_change_rate",
+      "episode_waiting_proxy_if_available_without_per_vehicle_calls"
+    ],
+    "note": "Training curves are diagnostic proxies and are not asserted equal to final benchmark KPIs unless computed by the same extraction pipeline."
+  },
+  "final_evaluation_kpi_contract": {
+    "source": "full frozen scenario outputs + exact extraction pipeline",
+    "kpis": [
+      "mean_waiting_time_completed_s",
+      "throughput_completed_trips",
+      "mean_total_queue_length_m",
+      "phase_change_rate_per_tls_per_min"
+    ]
+  },
+  "reward_contract": {
+    "name": "aggregate_local_efficient_pressure_v2",
+    "formula": "reward_i = -(sum(incoming_queue_norm + incoming_running_lookahead_norm) - sum(outgoing_queue_norm))",
+    "known_limitation": "If outgoing lanes are congested, pressure reward can move toward zero even under heavy load. This is a known property of pressure-style rewards, not a parser bug."
+  },
+  "forbidden_per_step_traci_calls": [
+    "traci.lane.getLength",
+    "traci.lane.getMaxSpeed",
+    "traci.lane.getLastStepVehicleIDs",
+    "traci.vehicle.getSpeed",
+    "traci.vehicle.getLanePosition"
+  ],
+  "allowed_dynamic_traci_calls": [
+    "traci.simulationStep",
+    "traci.simulation.getTime",
+    "traci.trafficlight.getPhase",
+    "traci.lane.getLastStepHaltingNumber",
+    "traci.lane.getLastStepVehicleNumber",
+    "traci.trafficlight.setPhase",
+    "traci.trafficlight.setPhaseDuration"
+  ],
+  "static_cache_fields": [
+    "lane_length_m_by_lane",
+    "lane_max_speed_mps_by_lane",
+    "q_max_lane_by_lane",
+    "lookahead_distance_m_by_lane",
+    "incoming_lanes_sorted_per_tls",
+    "outgoing_lanes_sorted_per_tls",
+    "controlled_links_per_tls",
+    "selectable_green_phase_metadata_per_tls",
+    "phase_timer_max_s_per_tls",
+    "valid_action_masks_static_part_per_tls_phase"
+  ],
+  "output_binding_requirements": {
+    "must_appear_in_training_config_json": [
+      "train_every_steps",
+      "learning_starts_steps",
+      "running_feature_mode",
+      "compute_budget"
+    ],
+    "must_appear_in_training_manifest_json": [
+      "train_every_steps",
+      "learning_starts_steps",
+      "running_feature_mode",
+      "compute_budget"
+    ],
+    "must_appear_in_training_summary_json": [
+      "train_every_steps",
+      "learning_starts_steps",
+      "running_feature_mode",
+      "compute_budget"
+    ],
+    "must_appear_in_env_contract_json": [
+      "train_every_steps",
+      "learning_starts_steps",
+      "per_network_episode_budgets"
+    ]
+  }
+}
